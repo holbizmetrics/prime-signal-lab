@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Multiplication Signal Hunter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #ff6600; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        button {
+            background: #ff6600; color: #fff; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+            font-size: 0.85em;
+        }
+        button:hover { background: #ff8833; }
+        button.secondary { background: #444; }
+        button.secondary:hover { background: #666; }
+        button.primary-action { background: #00aa66; font-size: 1em; padding: 10px 20px; }
+        button.primary-action:hover { background: #00cc88; }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #ff6600; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #00aaff; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; font-size: 0.85em; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00aa; font-weight: bold; }
+        .hl-cyan { color: #00ffff; }
+        
+        .finding {
+            background: #001833; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #00aaff; font-size: 0.9em;
+        }
+        .finding.positive { border-left-color: #00ff88; background: #001a11; }
+        .finding.negative { border-left-color: #ff4444; background: #1a0011; }
+        .finding.discovery { border-left-color: #ff00aa; background: #1a0018; }
+        .finding.winner { border-left-color: #ffaa00; background: #1a1100; border-width: 4px; }
+        
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+        .stat-box {
+            background: #1a1a2e; padding: 8px 12px; border-radius: 4px;
+            text-align: center; min-width: 70px;
+        }
+        .stat-value { font-size: 1.1em; font-weight: bold; color: #00ffaa; }
+        .stat-label { font-size: 0.65em; color: #888; }
+        
+        .progress-bar {
+            height: 24px; background: #222; border-radius: 4px;
+            margin: 10px 0; overflow: hidden; position: relative;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #004400, #00ff00);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        .correlation-bar {
+            height: 18px; background: #222; border-radius: 3px;
+            position: relative; overflow: hidden;
+        }
+        .correlation-fill {
+            height: 100%; position: absolute;
+            transition: width 0.3s, background 0.3s;
+        }
+        .correlation-fill.positive { background: #00aa44; left: 50%; }
+        .correlation-fill.negative { background: #aa4400; right: 50%; }
+        
+        .leaderboard {
+            background: #0a0a15; border-radius: 8px; padding: 15px;
+            border: 2px solid #333;
+        }
+        .leaderboard h3 {
+            color: #ffaa00; margin-bottom: 10px; font-size: 1em;
+            text-align: center;
+        }
+        
+        .rank-1 { background: linear-gradient(90deg, #332200, #111) !important; }
+        .rank-2 { background: linear-gradient(90deg, #222222, #111) !important; }
+        .rank-3 { background: linear-gradient(90deg, #221100, #111) !important; }
+        
+        .tag {
+            display: inline-block; padding: 2px 6px; border-radius: 3px;
+            font-size: 0.7em; margin-left: 5px;
+        }
+        .tag-base { background: #003366; color: #66aaff; }
+        .tag-algo { background: #336600; color: #88ff66; }
+        .tag-bool { background: #660033; color: #ff66aa; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        #status { 
+            text-align: center; padding: 10px; color: #888; 
+            font-style: italic; font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Ultimate Multiplication Signal Hunter</h1>
+    <p class="subtitle">Bases × Algorithms × Boolean = Find the strongest signal</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="number" id="primeP" value="163">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="number" id="primeQ" value="167">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="analyzeSingle()">🔬 Single</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomBalanced()">⚖️</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomUnbalanced()">📐</button>
+        </div>
+        <div class="control-group">
+            <label>Batch Size</label>
+            <input type="number" id="batchSize" value="150">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="primary-action" onclick="runFullHunt()">🎯 HUNT SIGNALS</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163
+        ];
+        
+        // All bases to test
+        const BASES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 32, 60, 64];
+        
+        function randomBalanced() {
+            const idx = Math.floor(Math.random() * (testPrimes.length - 10)) + 10;
+            document.getElementById('primeP').value = testPrimes[idx];
+            document.getElementById('primeQ').value = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+        }
+        
+        function randomUnbalanced() {
+            const p = testPrimes[Math.floor(Math.random() * 25)];
+            const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 25)];
+            document.getElementById('primeP').value = Math.min(p, q);
+            document.getElementById('primeQ').value = Math.max(p, q);
+        }
+        
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function toDigits(n, base) {
+            if (n === 0) return [0];
+            const digits = [];
+            while (n > 0) {
+                digits.push(n % base);
+                n = Math.floor(n / base);
+            }
+            return digits; // LSB first
+        }
+        
+        function popcount(n) {
+            let count = 0;
+            while (n) { count += n & 1; n >>>= 1; }
+            return count;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        // ============================================
+        // BASE-PARAMETERIZED ALGORITHMS
+        // ============================================
+        
+        // Schoolbook in any base
+        function schoolbook(p, q, base) {
+            const pDigits = toDigits(p, base);
+            const qDigits = toDigits(q, base);
+            const width = pDigits.length + qDigits.length;
+            
+            const partials = [];
+            for (let j = 0; j < qDigits.length; j++) {
+                const row = new Array(width).fill(0);
+                let carry = 0;
+                for (let i = 0; i < pDigits.length; i++) {
+                    const prod = pDigits[i] * qDigits[j] + carry;
+                    row[i + j] = prod % base;
+                    carry = Math.floor(prod / base);
+                }
+                if (carry) row[pDigits.length + j] = carry;
+                partials.push(row);
+            }
+            
+            const carries = [];
+            let carry = 0;
+            for (let col = 0; col < width; col++) {
+                let sum = carry;
+                for (const row of partials) sum += row[col];
+                carry = Math.floor(sum / base);
+                carries.push(carry);
+            }
+            
+            return {
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries),
+                numDigits: pDigits.length + qDigits.length,
+                carryDensity: carries.filter(c => c > 0).length / carries.length
+            };
+        }
+        
+        // Lattice in any base
+        function lattice(p, q, base) {
+            const pDigits = toDigits(p, base).reverse(); // MSB first
+            const qDigits = toDigits(q, base).reverse();
+            const rows = qDigits.length, cols = pDigits.length;
+            
+            const grid = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    const prod = pDigits[c] * qDigits[r];
+                    row.push({ upper: Math.floor(prod / base), lower: prod % base });
+                }
+                grid.push(row);
+            }
+            
+            const numDiagonals = rows + cols - 1;
+            const carries = [];
+            let carry = 0;
+            
+            for (let d = numDiagonals - 1; d >= 0; d--) {
+                let sum = carry;
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (r + c === d) sum += grid[r][c].lower;
+                        if (r + c + 1 === d) sum += grid[r][c].upper;
+                    }
+                }
+                carry = Math.floor(sum / base);
+                carries.unshift(carry);
+            }
+            
+            return {
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries),
+                diagonalCount: numDiagonals,
+                carryDensity: carries.filter(c => c > 0).length / carries.length
+            };
+        }
+        
+        // Urdhva-Tiryak (crosswise) in any base
+        function urdhvaTiryak(p, q, base) {
+            const pDigits = toDigits(p, base);
+            const qDigits = toDigits(q, base);
+            const maxLen = Math.max(pDigits.length, qDigits.length);
+            
+            while (pDigits.length < maxLen) pDigits.push(0);
+            while (qDigits.length < maxLen) qDigits.push(0);
+            
+            const crossProducts = [];
+            for (let pos = 0; pos < 2 * maxLen - 1; pos++) {
+                let sum = 0;
+                for (let i = 0; i < maxLen; i++) {
+                    const j = pos - i;
+                    if (j >= 0 && j < maxLen) {
+                        sum += pDigits[i] * qDigits[j];
+                    }
+                }
+                crossProducts.push(sum);
+            }
+            
+            const carries = [];
+            let carry = 0;
+            for (const cp of crossProducts) {
+                const total = cp + carry;
+                carry = Math.floor(total / base);
+                carries.push(carry);
+            }
+            
+            // Cross symmetry
+            let symDiff = 0;
+            for (let i = 0; i < Math.floor(crossProducts.length / 2); i++) {
+                symDiff += Math.abs(crossProducts[i] - crossProducts[crossProducts.length - 1 - i]);
+            }
+            const total = crossProducts.reduce((a, b) => a + b, 1);
+            
+            return {
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries),
+                middleCross: crossProducts[Math.floor(crossProducts.length / 2)],
+                crossSymmetry: 1 - symDiff / total,
+                maxCrossProduct: Math.max(...crossProducts)
+            };
+        }
+        
+        // Nikhilam (base deviation) - uses nearest power
+        function nikhilam(p, q, base) {
+            const maxVal = Math.max(p, q);
+            const power = Math.ceil(Math.log(maxVal) / Math.log(base));
+            const B = Math.pow(base, power);
+            
+            const devP = p - B;
+            const devQ = q - B;
+            const devProduct = devP * devQ;
+            
+            return {
+                base: B,
+                devP,
+                devQ,
+                devRatio: Math.abs(devP) / (Math.abs(devQ) || 1),
+                devProduct,
+                devSum: Math.abs(devP) + Math.abs(devQ)
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHODS (base-independent)
+        // ============================================
+        
+        function booleanAnalysis(p, q) {
+            const N = p * q;
+            
+            // Carryless (GF2) multiplication
+            let gf2Product = 0;
+            let temp = q;
+            let shift = 0;
+            while (temp) {
+                if (temp & 1) gf2Product ^= (p << shift);
+                temp >>>= 1;
+                shift++;
+            }
+            
+            const carryInfo = N ^ gf2Product;
+            
+            // Booth analysis
+            const qBits = q.toString(2) + '0';
+            let boothOps = 0;
+            for (let i = qBits.length - 1; i > 0; i--) {
+                if (qBits[i] !== qBits[i-1]) boothOps++;
+            }
+            
+            // Hamming weights
+            const hwP = popcount(p);
+            const hwQ = popcount(q);
+            const hwN = popcount(N);
+            
+            // Bit correlation
+            const lenN = bitLength(N);
+            const pBits = p.toString(2).padStart(lenN, '0');
+            const qBits2 = q.toString(2).padStart(lenN, '0');
+            const nBits = N.toString(2).padStart(lenN, '0');
+            
+            let xorMatch = 0, andMatch = 0;
+            for (let i = 0; i < lenN; i++) {
+                const pb = pBits[i] === '1' ? 1 : 0;
+                const qb = qBits2[i] === '1' ? 1 : 0;
+                const nb = nBits[i] === '1' ? 1 : 0;
+                if (nb === (pb ^ qb)) xorMatch++;
+                if (nb === (pb & qb)) andMatch++;
+            }
+            
+            return {
+                // GF2 analysis
+                gf2DiffBits: popcount(carryInfo),
+                gf2DiffRatio: popcount(carryInfo) / lenN,
+                
+                // Booth
+                boothOps,
+                boothDensity: boothOps / bitLength(q),
+                
+                // Hamming
+                hwP, hwQ, hwN,
+                hwRatio: hwN / (hwP * hwQ || 1),
+                hwDensityP: hwP / bitLength(p),
+                hwDensityQ: hwQ / bitLength(q),
+                hwDensityN: hwN / lenN,
+                hwDensityDiff: Math.abs(hwP/bitLength(p) - hwQ/bitLength(q)),
+                
+                // Bit correlation
+                xorMatchRatio: xorMatch / lenN,
+                andMatchRatio: andMatch / lenN,
+                
+                // Overlap
+                bitOverlap: popcount(p & q) / Math.min(hwP, hwQ || 1),
+                xorPopcount: popcount(p ^ q),
+                andPopcount: popcount(p & q),
+                orPopcount: popcount(p | q)
+            };
+        }
+        
+        // ============================================
+        // FULL ANALYSIS
+        // ============================================
+        
+        function fullAnalysis(p, q) {
+            const N = p * q;
+            const sqrtN = Math.sqrt(N);
+            const ratio = (p + q) / (2 * sqrtN);
+            
+            const features = {};
+            
+            // Add sqrt(N) and nearby bases dynamically
+            const dynamicBases = [...BASES];
+            const nearSqrt = Math.round(sqrtN);
+            if (nearSqrt > 1 && !dynamicBases.includes(nearSqrt)) {
+                dynamicBases.push(nearSqrt);
+            }
+            for (let delta = -2; delta <= 2; delta++) {
+                const b = nearSqrt + delta;
+                if (b > 1 && !dynamicBases.includes(b)) {
+                    dynamicBases.push(b);
+                }
+            }
+            dynamicBases.sort((a, b) => a - b);
+            
+            // Test each base
+            for (const base of dynamicBases) {
+                if (base > N) continue; // Skip bases larger than N
+                
+                const prefix = `B${base}`;
+                const isNearSqrt = Math.abs(base - sqrtN) <= 2;
+                const tag = isNearSqrt ? '_sqrtN' : '';
+                
+                // Schoolbook
+                const sb = schoolbook(p, q, base);
+                features[`${prefix}_School_Carry${tag}`] = sb.totalCarry;
+                features[`${prefix}_School_MaxCarry${tag}`] = sb.maxCarry;
+                features[`${prefix}_School_CarryDens${tag}`] = sb.carryDensity;
+                
+                // Lattice
+                const lt = lattice(p, q, base);
+                features[`${prefix}_Lattice_Carry${tag}`] = lt.totalCarry;
+                features[`${prefix}_Lattice_MaxCarry${tag}`] = lt.maxCarry;
+                features[`${prefix}_Lattice_CarryDens${tag}`] = lt.carryDensity;
+                
+                // Urdhva
+                const ut = urdhvaTiryak(p, q, base);
+                features[`${prefix}_Urdhva_Carry${tag}`] = ut.totalCarry;
+                features[`${prefix}_Urdhva_CrossSym${tag}`] = ut.crossSymmetry;
+                features[`${prefix}_Urdhva_MaxCross${tag}`] = ut.maxCrossProduct;
+                
+                // Nikhilam
+                const nk = nikhilam(p, q, base);
+                features[`${prefix}_Nikhilam_DevRatio${tag}`] = nk.devRatio;
+                features[`${prefix}_Nikhilam_DevSum${tag}`] = nk.devSum;
+            }
+            
+            // Boolean features (base-independent)
+            const bool = booleanAnalysis(p, q);
+            features['Bool_GF2_DiffBits'] = bool.gf2DiffBits;
+            features['Bool_GF2_DiffRatio'] = bool.gf2DiffRatio;
+            features['Bool_Booth_Ops'] = bool.boothOps;
+            features['Bool_Booth_Density'] = bool.boothDensity;
+            features['Bool_HW_Ratio'] = bool.hwRatio;
+            features['Bool_HW_DensityDiff'] = bool.hwDensityDiff;
+            features['Bool_XOR_Match'] = bool.xorMatchRatio;
+            features['Bool_AND_Match'] = bool.andMatchRatio;
+            features['Bool_BitOverlap'] = bool.bitOverlap;
+            features['Bool_XOR_Popcount'] = bool.xorPopcount;
+            features['Bool_AND_Popcount'] = bool.andPopcount;
+            
+            return { p, q, N, ratio, features };
+        }
+        
+        // ============================================
+        // CORRELATION
+        // ============================================
+        
+        function computeCorrelation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        // ============================================
+        // BATCH HUNT
+        // ============================================
+        
+        async function runFullHunt() {
+            const batchSize = parseInt(document.getElementById('batchSize').value) || 150;
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+            
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 0%"></div><div class="progress-text">Generating samples...</div></div>`;
+            
+            await new Promise(r => setTimeout(r, 50));
+            
+            // Generate diverse samples
+            const samples = [];
+            const balancedCount = Math.floor(batchSize * 0.5);
+            
+            // Balanced samples
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            // Unbalanced samples
+            for (let i = balancedCount; i < batchSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 30)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 30)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            // Analyze each sample
+            const allResults = [];
+            for (let i = 0; i < samples.length; i++) {
+                const [p, q] = samples[i];
+                allResults.push(fullAnalysis(p, q));
+                
+                if (i % 10 === 0) {
+                    const pct = Math.round((i / samples.length) * 100);
+                    statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div><div class="progress-text">Analyzing ${i}/${samples.length}...</div></div>`;
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+            
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 100%"></div><div class="progress-text">Computing correlations...</div></div>`;
+            await new Promise(r => setTimeout(r, 50));
+            
+            // Compute correlations
+            const ratios = allResults.map(r => r.ratio);
+            const featureNames = Object.keys(allResults[0].features);
+            
+            const correlations = [];
+            for (const name of featureNames) {
+                const values = allResults.map(r => r.features[name]);
+                // Filter out NaN/Infinity
+                const validPairs = ratios.map((r, i) => [r, values[i]])
+                    .filter(([r, v]) => isFinite(r) && isFinite(v));
+                
+                if (validPairs.length < 10) continue;
+                
+                const corr = computeCorrelation(
+                    validPairs.map(p => p[0]),
+                    validPairs.map(p => p[1])
+                );
+                
+                if (isFinite(corr)) {
+                    correlations.push({ name, corr, absCorr: Math.abs(corr) });
+                }
+            }
+            
+            // Sort by absolute correlation
+            correlations.sort((a, b) => b.absCorr - a.absCorr);
+            
+            // Render results
+            statusEl.innerHTML = '';
+            renderResults(correlations, allResults.length);
+        }
+        
+        function renderResults(correlations, sampleCount) {
+            let html = '';
+            
+            // Summary stats
+            html += `<div class="panel">`;
+            html += `<h2>🎯 Signal Hunt Complete</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${sampleCount}</div><div class="stat-label">Samples</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${correlations.length}</div><div class="stat-label">Features</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${BASES.length}+</div><div class="stat-label">Bases</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">4</div><div class="stat-label">Algorithms</div></div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Top 10 Leaderboard
+            html += `<div class="leaderboard">`;
+            html += `<h3>🏆 TOP 20 SIGNALS (by |correlation| with balance ratio)</h3>`;
+            html += `<table>`;
+            html += `<tr><th>#</th><th>Feature</th><th>r</th><th>|r|</th><th>Visual</th></tr>`;
+            
+            for (let i = 0; i < Math.min(20, correlations.length); i++) {
+                const c = correlations[i];
+                const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                const strength = c.absCorr > 0.5 ? 'hl-green' : c.absCorr > 0.35 ? 'hl-yellow' : c.absCorr > 0.25 ? 'hl-blue' : '';
+                
+                // Parse feature name for tags
+                let tags = '';
+                if (c.name.startsWith('B')) {
+                    const base = c.name.match(/B(\d+)/)?.[1];
+                    tags += `<span class="tag tag-base">base ${base}</span>`;
+                }
+                if (c.name.includes('Bool')) tags += `<span class="tag tag-bool">boolean</span>`;
+                if (c.name.includes('School')) tags += `<span class="tag tag-algo">schoolbook</span>`;
+                if (c.name.includes('Lattice')) tags += `<span class="tag tag-algo">lattice</span>`;
+                if (c.name.includes('Urdhva')) tags += `<span class="tag tag-algo">urdhva</span>`;
+                if (c.name.includes('Nikhilam')) tags += `<span class="tag tag-algo">nikhilam</span>`;
+                if (c.name.includes('sqrtN')) tags += `<span class="tag tag-base">≈√N</span>`;
+                
+                html += `<tr class="${rankClass}">`;
+                html += `<td class="${strength}">${i + 1}</td>`;
+                html += `<td>${c.name.replace(/_/g, ' ')} ${tags}</td>`;
+                html += `<td class="${strength}">${c.corr.toFixed(4)}</td>`;
+                html += `<td class="${strength}">${c.absCorr.toFixed(4)}</td>`;
+                html += `<td><div class="correlation-bar"><div class="correlation-fill ${c.corr >= 0 ? 'positive' : 'negative'}" style="width: ${c.absCorr * 100}%"></div></div></td>`;
+                html += `</tr>`;
+            }
+            
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Analysis by category
+            html += `<div class="grid-2">`;
+            
+            // Best by base
+            html += `<div class="panel">`;
+            html += `<h3>📊 Best Signal Per Base</h3>`;
+            const byBase = {};
+            for (const c of correlations) {
+                const match = c.name.match(/B(\d+)/);
+                if (match) {
+                    const base = match[1];
+                    if (!byBase[base] || c.absCorr > byBase[base].absCorr) {
+                        byBase[base] = c;
+                    }
+                }
+            }
+            
+            const baseSorted = Object.entries(byBase).sort((a, b) => b[1].absCorr - a[1].absCorr);
+            html += `<table>`;
+            html += `<tr><th>Base</th><th>Best Feature</th><th>|r|</th></tr>`;
+            for (const [base, c] of baseSorted.slice(0, 10)) {
+                const strength = c.absCorr > 0.4 ? 'hl-green' : c.absCorr > 0.3 ? 'hl-yellow' : '';
+                html += `<tr><td>${base}</td><td>${c.name.split('_').slice(1).join(' ')}</td><td class="${strength}">${c.absCorr.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Best by algorithm
+            html += `<div class="panel">`;
+            html += `<h3>⚙️ Best Signal Per Algorithm</h3>`;
+            const byAlgo = { School: null, Lattice: null, Urdhva: null, Nikhilam: null, Bool: null };
+            for (const c of correlations) {
+                for (const algo of Object.keys(byAlgo)) {
+                    if (c.name.includes(algo)) {
+                        if (!byAlgo[algo] || c.absCorr > byAlgo[algo].absCorr) {
+                            byAlgo[algo] = c;
+                        }
+                    }
+                }
+            }
+            
+            html += `<table>`;
+            html += `<tr><th>Algorithm</th><th>Best Feature</th><th>|r|</th></tr>`;
+            const algoSorted = Object.entries(byAlgo).filter(([,v]) => v).sort((a, b) => b[1].absCorr - a[1].absCorr);
+            for (const [algo, c] of algoSorted) {
+                const strength = c.absCorr > 0.4 ? 'hl-green' : c.absCorr > 0.3 ? 'hl-yellow' : '';
+                html += `<tr><td>${algo}</td><td>${c.name}</td><td class="${strength}">${c.absCorr.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end grid
+            
+            // Key findings
+            const winner = correlations[0];
+            const boolWinner = correlations.find(c => c.name.includes('Bool'));
+            const latticeWinner = correlations.find(c => c.name.includes('Lattice'));
+            const sqrtNWinner = correlations.find(c => c.name.includes('sqrtN'));
+            
+            html += `<div class="panel">`;
+            html += `<h2>💡 Key Findings</h2>`;
+            
+            html += `<div class="finding winner">`;
+            html += `<strong>🏆 OVERALL WINNER:</strong> ${winner.name.replace(/_/g, ' ')}<br>`;
+            html += `Correlation: <span class="hl-green">r = ${winner.corr.toFixed(4)}</span> (|r| = ${winner.absCorr.toFixed(4)})`;
+            html += `</div>`;
+            
+            if (sqrtNWinner && sqrtNWinner.absCorr > 0.25) {
+                html += `<div class="finding positive">`;
+                html += `<strong>📐 Base ≈ √N Signal:</strong> ${sqrtNWinner.name.replace(/_/g, ' ')}<br>`;
+                html += `r = ${sqrtNWinner.corr.toFixed(4)} — Dynamic base near √N ${sqrtNWinner.absCorr > winner.absCorr * 0.9 ? 'is competitive!' : 'shows promise'}`;
+                html += `</div>`;
+            }
+            
+            if (boolWinner) {
+                html += `<div class="finding">`;
+                html += `<strong>🔌 Best Boolean:</strong> ${boolWinner.name.replace(/_/g, ' ')}<br>`;
+                html += `r = ${boolWinner.corr.toFixed(4)} — ${boolWinner.absCorr > 0.3 ? 'Significant!' : 'Moderate signal'}`;
+                html += `</div>`;
+            }
+            
+            // Compare to our baseline (base-10 lattice)
+            const base10Lattice = correlations.find(c => c.name === 'B10_Lattice_Carry');
+            if (base10Lattice) {
+                const improvement = ((winner.absCorr / base10Lattice.absCorr) - 1) * 100;
+                html += `<div class="finding ${improvement > 10 ? 'discovery' : ''}">`;
+                html += `<strong>📈 vs Base-10 Lattice Baseline:</strong><br>`;
+                html += `Baseline: |r| = ${base10Lattice.absCorr.toFixed(4)}<br>`;
+                html += `Winner: |r| = ${winner.absCorr.toFixed(4)}<br>`;
+                html += `<span class="${improvement > 0 ? 'hl-green' : 'hl-red'}">${improvement > 0 ? '+' : ''}${improvement.toFixed(1)}% ${improvement > 0 ? 'improvement!' : 'difference'}</span>`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // ============================================
+        // SINGLE ANALYSIS
+        // ============================================
+        
+        function analyzeSingle() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const result = fullAnalysis(p, q);
+            
+            let html = '';
+            html += `<div class="panel">`;
+            html += `<h2>🔬 Single Analysis: ${p} × ${q} = ${result.N}</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${result.ratio.toFixed(4)}</div><div class="stat-label">Balance Ratio</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${Math.abs(q - p)}</div><div class="stat-label">|p - q|</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${Math.floor(Math.sqrt(result.N))}</div><div class="stat-label">√N</div></div>`;
+            html += `</div>`;
+            
+            html += `<h3>Feature Values (selected)</h3>`;
+            html += `<table>`;
+            html += `<tr><th>Feature</th><th>Value</th></tr>`;
+            
+            const interesting = Object.entries(result.features)
+                .filter(([k]) => k.includes('B10_') || k.includes('Bool_') || k.includes('sqrtN'))
+                .slice(0, 20);
+            
+            for (const [name, value] of interesting) {
+                html += `<tr><td>${name.replace(/_/g, ' ')}</td><td>${typeof value === 'number' ? value.toFixed(4) : value}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initialize
+        analyzeSingle();
+    </script>
+</body>
+</html>

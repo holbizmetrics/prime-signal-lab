@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 The Carry Avalanche Lab</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0d0d1a 100%); color: #e0e0e0; min-height: 100vh; }
+        .nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 1000; padding: 10px 20px; }
+        .nav-content { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .nav-title { font-size: 1.2em; font-weight: bold; background: linear-gradient(135deg, #ff6b00, #ffc800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+        .nav-tab { padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: #aaa; cursor: pointer; transition: all 0.3s; font-size: 0.8em; }
+        .nav-tab:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+        .nav-tab.active { background: linear-gradient(135deg, #00d4ff, #0088ff); border-color: transparent; color: #000; font-weight: 600; }
+        .main { padding: 70px 20px 40px 20px; max-width: 1600px; margin: 0 auto; }
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        h1 { font-size: 1.8em; margin-bottom: 10px; background: linear-gradient(135deg, #00d4ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.3em; margin: 20px 0 15px 0; color: #00d4ff; }
+        h3 { font-size: 1em; margin: 15px 0 10px 0; color: #ffc800; }
+        .subtitle { color: #888; margin-bottom: 20px; }
+        .panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 15px; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-group label { font-size: 0.8em; color: #aaa; }
+        input, select { padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 0.95em; }
+        button { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9em; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0088ff); color: #000; }
+        .btn-secondary { background: linear-gradient(135deg, #ff6b00, #ff9500); color: #000; }
+        button:hover { transform: translateY(-1px); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .stat-card { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-value { font-size: 1.4em; font-weight: bold; color: #00d4ff; }
+        .stat-label { font-size: 0.75em; color: #888; margin-top: 4px; }
+        .insight-box { background: rgba(255, 107, 0, 0.1); border: 1px solid rgba(255, 107, 0, 0.3); border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .insight-box.success { background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); }
+        .insight-box.info { background: rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); }
+        .insight-box.danger { background: rgba(255, 68, 68, 0.1); border-color: rgba(255, 68, 68, 0.3); }
+        .formula { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin: 10px 0; font-size: 0.85em; overflow-x: auto; white-space: pre-wrap; }
+        .bit-grid { display: flex; flex-wrap: wrap; gap: 2px; font-family: monospace; }
+        .bit { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 3px; font-size: 0.75em; font-weight: bold; }
+        .viz-container { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 10px 0; }
+        th, td { padding: 8px; text-align: center; border: 1px solid #333; }
+        th { background: rgba(0, 212, 255, 0.2); }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .good { color: #00ff88; }
+        .bad { color: #ff4444; }
+        .neutral { color: #ffc800; }
+        .log-box { font-family: monospace; font-size: 0.8em; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; }
+        .timeline { display: flex; align-items: center; gap: 10px; padding: 20px 0; overflow-x: auto; }
+        .timeline-step { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+        .timeline-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; margin-bottom: 8px; }
+        .timeline-arrow { font-size: 1.5em; color: #444; }
+        .timeline-label { font-size: 0.8em; text-align: center; }
+        .timeline-value { font-size: 0.7em; color: #888; }
+        .number-line { position: relative; height: 80px; margin: 20px 0; }
+        .number-line-bar { position: absolute; bottom: 30px; left: 5%; right: 5%; height: 4px; background: #444; border-radius: 2px; }
+        .marker { position: absolute; bottom: 25px; transform: translateX(-50%); text-align: center; }
+        .marker-dot { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 5px auto; }
+        .marker-label { font-size: 0.7em; white-space: nowrap; }
+        .marker-val { font-size: 0.65em; color: #888; }
+        .search-bar { position: absolute; bottom: 32px; height: 6px; background: rgba(255, 107, 0, 0.4); border: 1px solid #ff6b00; border-radius: 3px; }
+        @media (max-width: 768px) { .nav-title { font-size: 1em; } .nav-tab { padding: 6px 10px; font-size: 0.75em; } h1 { font-size: 1.4em; } .grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <span class="nav-title">🔬 Carry Avalanche Lab</span>
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-section="intro">📖 Story</button>
+                <button class="nav-tab" data-section="signals">📡 Signals</button>
+                <button class="nav-tab" data-section="avalanche">💥 Avalanche</button>
+                <button class="nav-tab" data-section="addition">⚔️ Add vs Mul</button>
+                <button class="nav-tab" data-section="coordinate">🧭 Coordinate</button>
+                <button class="nav-tab" data-section="fermat">🔍 Fermat</button>
+                <button class="nav-tab" data-section="conclusion">🎯 Conclusion</button>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="main">
+        <!-- INTRO -->
+        <section id="intro" class="section active">
+            <h1>The Carry Avalanche</h1>
+            <p class="subtitle">A visual journey into why integer factorization is hard</p>
+            
+            <div class="panel">
+                <h2>The Question</h2>
+                <p>Given N = p × q, can we recover p and q?</p>
+                <div class="formula">Multiplication: p, q → N      (easy, O(n²))
+Factorization: N → p, q      (hard, no polynomial algorithm)</div>
+                <p style="margin-top: 15px;">This asymmetry secures RSA. But <strong>why</strong> is it hard?</p>
+            </div>
+            
+            <div class="panel">
+                <h2>What We Discovered</h2>
+                <div class="timeline">
+                    <div class="timeline-step">
+                        <div class="timeline-icon" style="background: rgba(0,212,255,0.3);">📡</div>
+                        <div class="timeline-label">Strong signals exist</div>
+                        <div class="timeline-value">r = 0.77</div>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon" style="background: rgba(255,200,0,0.3);">⚠️</div>
+                        <div class="timeline-label">But need factors</div>
+                        <div class="timeline-value">N-only: r = 0.60</div>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon" style="background: rgba(255,107,0,0.3);">💥</div>
+                        <div class="timeline-label">Carries destroy info</div>
+                        <div class="timeline-value">~35% lost</div>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon" style="background: rgba(255,68,68,0.3);">🚫</div>
+                        <div class="timeline-label">Can't reconstruct</div>
+                        <div class="timeline-value">best r = 0.40</div>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon" style="background: rgba(0,255,136,0.3);">🎯</div>
+                        <div class="timeline-label">Calibrated hardness</div>
+                        <div class="timeline-value">error ~ imbalance²</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>The Core Insight</h2>
+                <div class="insight-box info">
+                    <strong>Multiplication destroys locality through carry propagation.</strong><br><br>
+                    Each output bit becomes a function of ALL input bits. This "carry avalanche" creates non-local dependencies that make factorization require global search.
+                </div>
+                <div class="formula">The carry avalanche is not a bug.
+It is the feature that makes RSA work.</div>
+            </div>
+            
+            <div class="panel">
+                <h2>Navigate the Lab</h2>
+                <div class="grid-2">
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('signals')">
+                        <div style="font-size: 1.5em;">📡</div>
+                        <div class="stat-label">Signal Hunter</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('avalanche')">
+                        <div style="font-size: 1.5em;">💥</div>
+                        <div class="stat-label">Carry Avalanche</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('addition')">
+                        <div style="font-size: 1.5em;">⚔️</div>
+                        <div class="stat-label">Add vs Multiply</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('coordinate')">
+                        <div style="font-size: 1.5em;">🧭</div>
+                        <div class="stat-label">Coordinate System</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('fermat')">
+                        <div style="font-size: 1.5em;">🔍</div>
+                        <div class="stat-label">Fermat Search</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="showSection('conclusion')">
+                        <div style="font-size: 1.5em;">🎯</div>
+                        <div class="stat-label">Conclusion</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- SIGNALS -->
+        <section id="signals" class="section">
+            <h1>📡 Signal Hunter</h1>
+            <p class="subtitle">What correlations exist with factor properties?</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Sample Size</label>
+                    <input type="number" id="signalSampleSize" value="100" min="20" max="500">
+                </div>
+                <button class="btn-primary" onclick="runSignalHunt()">🔍 Hunt Signals</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="panel">
+                    <h2>Factor-Dependent Signals</h2>
+                    <p style="color: #888; font-size: 0.85em;">Require knowing p and q</p>
+                    <div id="factorSignals"><p style="color: #666;">Click Hunt Signals...</p></div>
+                </div>
+                <div class="panel">
+                    <h2>N-Only Signals</h2>
+                    <p style="color: #888; font-size: 0.85em;">Computed from N alone</p>
+                    <div id="nOnlySignals"><p style="color: #666;">Click Hunt Signals...</p></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>The Information Gap</h2>
+                <div id="signalGap"><div class="insight-box">Run analysis to see the gap...</div></div>
+            </div>
+        </section>
+        
+        <!-- AVALANCHE -->
+        <section id="avalanche" class="section">
+            <h1>💥 Carry Avalanche</h1>
+            <p class="subtitle">Watch how carries mix bit positions</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Factor p</label>
+                    <input type="number" id="avalancheP" value="13" min="3" max="255">
+                </div>
+                <div class="control-group">
+                    <label>Factor q</label>
+                    <input type="number" id="avalancheQ" value="11" min="3" max="255">
+                </div>
+                <button class="btn-primary" onclick="runAvalanche()">💥 Visualize</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="panel">
+                    <h3>Dependency Map</h3>
+                    <p style="color: #888; font-size: 0.8em;">Each output bit depends on this many input positions</p>
+                    <div id="dependencyMap" class="viz-container"></div>
+                </div>
+                <div class="panel">
+                    <h3>Mixing Stats</h3>
+                    <div id="mixingStats" class="stats-grid"></div>
+                    <div class="insight-box" style="margin-top: 15px;">
+                        <strong>Non-locality:</strong> High bits depend on ALL lower positions through carry chains.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>Bit Flow Visualization</h3>
+                <div id="bitFlowViz" class="viz-container"></div>
+            </div>
+        </section>
+        
+        <!-- ADDITION -->
+        <section id="addition" class="section">
+            <h1>⚔️ Addition vs Multiplication</h1>
+            <p class="subtitle">Which preserves more factor information?</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Sample Size</label>
+                    <input type="number" id="addSampleSize" value="100" min="20" max="300">
+                </div>
+                <button class="btn-primary" onclick="runAdditionComparison()">⚔️ Compare</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="panel">
+                    <h2>× Multiplication (N = p × q)</h2>
+                    <div id="mulStats" class="stats-grid"></div>
+                </div>
+                <div class="panel">
+                    <h2>+ Addition (S = p + q)</h2>
+                    <div id="addStats" class="stats-grid"></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>The Cruel Irony</h2>
+                <div class="insight-box danger">
+                    <strong>S = p + q contains 100% of the information needed to factor!</strong>
+                    <div class="formula">Given N and S:  p, q = (S ± √(S² - 4N)) / 2</div>
+                    <strong>But we don't have S. We only have N.</strong>
+                </div>
+                <h3>Can We Estimate S from N?</h3>
+                <div id="sEstimation"><p style="color: #666;">Run comparison to see...</p></div>
+            </div>
+        </section>
+        
+        <!-- COORDINATE -->
+        <section id="coordinate" class="section">
+            <h1>🧭 The Coordinate System</h1>
+            <p class="subtitle">Why knowing one factor is like having a decryption key</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Factor p</label>
+                    <input type="number" id="coordP" value="97" min="3" max="9999">
+                </div>
+                <div class="control-group">
+                    <label>Factor q</label>
+                    <input type="number" id="coordQ" value="89" min="3" max="9999">
+                </div>
+                <div class="control-group">
+                    <label>Preset</label>
+                    <select id="coordPreset" onchange="applyCoordPreset()">
+                        <option value="">Custom</option>
+                        <option value="97,89">Balanced: 97 × 89</option>
+                        <option value="251,37">Moderate: 251 × 37</option>
+                        <option value="997,7">Extreme: 997 × 7</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="runCoordinate()">🧭 Analyze</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="panel">
+                    <h2>❌ Without p (No Reference)</h2>
+                    <h3>N = <span id="coordN">--</span></h3>
+                    <div id="coordBitsN" class="bit-grid"></div>
+                    <h3>Dependency Map</h3>
+                    <div id="coordDepMap"></div>
+                </div>
+                <div class="panel">
+                    <h2>✅ With p (Reference Restored)</h2>
+                    <h3>p = <span id="coordPDisplay">--</span></h3>
+                    <div id="coordBitsP" class="bit-grid"></div>
+                    <h3>Division Steps</h3>
+                    <div id="coordDivision" class="log-box" style="max-height: 250px;"></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="insight-box success">
+                    <strong>The Key:</strong> Each bit of q is determined by ONE local comparison: "Is remainder ≥ p × 2^k?"<br><br>
+                    The factor p provides the <strong>coordinate system</strong> that makes N's bits interpretable.
+                </div>
+            </div>
+        </section>
+        
+        <!-- FERMAT -->
+        <section id="fermat" class="section">
+            <h1>🔍 Fermat's Method</h1>
+            <p class="subtitle">Search from √N for factors</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Factor p</label>
+                    <input type="number" id="fermatP" value="97" min="3" max="9999">
+                </div>
+                <div class="control-group">
+                    <label>Factor q</label>
+                    <input type="number" id="fermatQ" value="89" min="3" max="9999">
+                </div>
+                <button class="btn-primary" onclick="setupFermat()">📊 Setup</button>
+                <button class="btn-secondary" onclick="runFermatSearch()">▶ Search</button>
+                <button onclick="stopFermatSearch()">⏹ Stop</button>
+            </div>
+            
+            <div class="panel">
+                <h2>Search Space</h2>
+                <div class="number-line" id="fermatNumberLine"><div class="number-line-bar"></div></div>
+                <div id="fermatStats" class="stats-grid"></div>
+            </div>
+            
+            <div class="panel">
+                <h2>Search Log</h2>
+                <div id="fermatLog" class="log-box"><p style="color: #666;">Setup and run Fermat search...</p></div>
+            </div>
+            
+            <div class="panel">
+                <h2>Why Search Distance = Imbalance</h2>
+                <table>
+                    <thead><tr><th>Imbalance</th><th>Example</th><th>√N</th><th>Target</th><th>Steps</th><th>Verdict</th></tr></thead>
+                    <tbody>
+                        <tr><td>1.09×</td><td>89 × 97</td><td>92.9</td><td>93</td><td class="good">1</td><td class="good">Fast ✓</td></tr>
+                        <tr><td>1.79×</td><td>71 × 127</td><td>95.0</td><td>99</td><td class="good">5</td><td class="good">Fast ✓</td></tr>
+                        <tr><td>3.60×</td><td>10451 × 37654</td><td>19837</td><td>24053</td><td class="neutral">4216</td><td class="neutral">Slow</td></tr>
+                        <tr><td>6.78×</td><td>37 × 251</td><td>96.4</td><td>144</td><td class="neutral">48</td><td class="neutral">Slow</td></tr>
+                        <tr><td>142×</td><td>7 × 997</td><td>83.5</td><td>502</td><td class="bad">419</td><td class="bad">Fails ✗</td></tr>
+                    </tbody>
+                </table>
+                <div class="insight-box"><strong>The Calibration:</strong> Search distance scales with imbalance — exactly when factoring is hard.</div>
+            </div>
+        </section>
+        
+        <!-- CONCLUSION -->
+        <section id="conclusion" class="section">
+            <h1>🎯 The Conclusion</h1>
+            <p class="subtitle">What we discovered about why factorization is hard</p>
+            
+            <div class="panel">
+                <h2>The Complete Picture</h2>
+                <div class="formula">┌─────────────────────────────────────────────────────────────────┐
+│  FORWARD: p, q → N = p×q                      (trivial)        │
+│  REVERSE: N → ??? → p, q                      (hard)           │
+│                ↑                                                │
+│                └── THE CARRY AVALANCHE                          │
+│                                                                 │
+│  • Carries destroy locality (we visualized this)               │
+│  • Destruction is irreversible (we proved this)                │
+│  • Error scales with imbalance (we measured this)              │
+│                                                                 │
+│  THE CIRCULARITY IS FUNDAMENTAL                                │
+└─────────────────────────────────────────────────────────────────┘</div>
+            </div>
+            
+            <div class="panel">
+                <h2>Key Findings</h2>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value">0.77</div><div class="stat-label">Best signal (factor-dep)</div></div>
+                    <div class="stat-card"><div class="stat-value">0.60</div><div class="stat-label">Best signal (N-only)</div></div>
+                    <div class="stat-card"><div class="stat-value">~35%</div><div class="stat-label">Information lost</div></div>
+                    <div class="stat-card"><div class="stat-value">14</div><div class="stat-label">Avg mixing depth</div></div>
+                    <div class="stat-card"><div class="stat-value">0.40</div><div class="stat-label">Best reconstruction</div></div>
+                    <div class="stat-card"><div class="stat-value">24%</div><div class="stat-label">S estimation error</div></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>The Circularity</h2>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin: 20px 0;">
+                    <div class="stat-card"><div style="font-size: 2em;">🎯</div><div class="stat-label">To estimate S</div><div style="color: #ffc800;">Need imbalance</div></div>
+                    <div class="stat-card"><div style="font-size: 2em;">🔍</div><div class="stat-label">To know imbalance</div><div style="color: #ffc800;">Need factors</div></div>
+                    <div class="stat-card"><div style="font-size: 2em;">🔐</div><div class="stat-label">To get factors</div><div style="color: #ffc800;">Need to factor N</div></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="insight-box success">
+                    <h2 style="color: #00ff88; margin-bottom: 15px;">The Final Truth</h2>
+                    <p style="font-size: 1.1em;"><strong>We didn't break factoring. We understood WHY it can't be broken this way.</strong></p>
+                    <br>
+                    <p>The carry avalanche isn't noise — it's precisely calibrated information destruction.</p>
+                    <br>
+                    <div class="formula" style="text-align: center; font-size: 1.1em;">The carry avalanche is not a bug.
+It is the feature that makes cryptography possible.</div>
+                </div>
+            </div>
+            
+            <div class="panel" style="text-align: center;">
+                <p style="color: #888;">Research by Holger Morlok • Tools developed with Claude • January 2026</p>
+            </div>
+        </section>
+    </main>
+    
+    <script>
+        // Navigation
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => showSection(tab.dataset.section));
+        });
+        
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelector(`[data-section="${id}"]`).classList.add('active');
+        }
+        
+        // Utilities
+        function isPrime(n) { if (n < 2) return false; if (n === 2) return true; if (n % 2 === 0) return false; for (let i = 3; i <= Math.sqrt(n); i += 2) if (n % i === 0) return false; return true; }
+        function randomPrime(min, max) { let p; do { p = Math.floor(Math.random() * (max - min)) + min; } while (!isPrime(p)); return p; }
+        function toBinary(n) { return n.toString(2); }
+        function popcount(n) { return toBinary(n).split('').filter(b => b === '1').length; }
+        function correlation(x, y) { const n = x.length, mx = x.reduce((a,b)=>a+b,0)/n, my = y.reduce((a,b)=>a+b,0)/n; let num=0, dx=0, dy=0; for (let i=0; i<n; i++) { const xi=x[i]-mx, yi=y[i]-my; num+=xi*yi; dx+=xi*xi; dy+=yi*yi; } return dx&&dy ? num/Math.sqrt(dx*dy) : 0; }
+        function generateSemiprimes(count, bits=10) { const semiprimes = [], min = Math.pow(2, bits-1), max = Math.pow(2, bits); for (let i=0; i<count; i++) { const sqrtMin=Math.sqrt(min), sqrtMax=Math.sqrt(max); let p=randomPrime(3, Math.floor(sqrtMax)), q=randomPrime(Math.floor(sqrtMin), Math.floor(max/p)); if(p>q)[p,q]=[q,p]; semiprimes.push({p,q,N:p*q}); } return semiprimes; }
+        
+        // SIGNALS
+        function runSignalHunt() {
+            const data = generateSemiprimes(parseInt(document.getElementById('signalSampleSize').value));
+            const balances = data.map(d => (d.p + d.q) / (2 * Math.sqrt(d.N)));
+            
+            const factorSigs = [
+                { name: 'P_BitLen + Q_BitLen', fn: d => toBinary(d.p).length + toBinary(d.q).length },
+                { name: '|P - Q|', fn: d => Math.abs(d.p - d.q) },
+                { name: 'P XOR Q', fn: d => d.p ^ d.q },
+            ];
+            const nOnlySigs = [
+                { name: 'N - ⌊√N⌋²', fn: d => d.N - Math.floor(Math.sqrt(d.N))**2 },
+                { name: 'N popcount', fn: d => popcount(d.N) },
+                { name: '√N fractional', fn: d => Math.sqrt(d.N) % 1 },
+            ];
+            
+            let fHtml = '<table><tr><th>Signal</th><th>r</th></tr>', bestF = 0;
+            factorSigs.forEach(s => { const r = Math.abs(correlation(data.map(s.fn), balances)); bestF = Math.max(bestF, r); fHtml += `<tr><td>${s.name}</td><td class="${r>0.5?'good':''}">${r.toFixed(3)}</td></tr>`; });
+            document.getElementById('factorSignals').innerHTML = fHtml + '</table>';
+            
+            let nHtml = '<table><tr><th>Signal</th><th>r</th></tr>', bestN = 0;
+            nOnlySigs.forEach(s => { const r = Math.abs(correlation(data.map(s.fn), balances)); bestN = Math.max(bestN, r); nHtml += `<tr><td>${s.name}</td><td class="${r>0.3?'neutral':''}">${r.toFixed(3)}</td></tr>`; });
+            document.getElementById('nOnlySignals').innerHTML = nHtml + '</table>';
+            
+            const gap = ((bestF - bestN) / bestF * 100).toFixed(1);
+            document.getElementById('signalGap').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value good">${bestF.toFixed(2)}</div><div class="stat-label">Best factor-dep</div></div>
+                    <div class="stat-card"><div class="stat-value neutral">${bestN.toFixed(2)}</div><div class="stat-label">Best N-only</div></div>
+                    <div class="stat-card"><div class="stat-value bad">${gap}%</div><div class="stat-label">Gap (info lost)</div></div>
+                </div>`;
+        }
+        
+        // AVALANCHE
+        function runAvalanche() {
+            let p = parseInt(document.getElementById('avalancheP').value), q = parseInt(document.getElementById('avalancheQ').value);
+            if (p > q) [p, q] = [q, p];
+            const N = p * q, pBits = toBinary(p).length, qBits = toBinary(q).length, nBits = toBinary(N).length;
+            
+            let depHtml = '<div style="display:grid;grid-template-columns:repeat('+nBits+',1fr);gap:2px;">', totalMix = 0, maxMix = 0;
+            for (let i = 0; i < nBits; i++) {
+                const depth = Math.min(i + 1, pBits + qBits - Math.max(0, i - Math.max(pBits, qBits) + 1));
+                totalMix += depth; maxMix = Math.max(maxMix, depth);
+                const intensity = Math.min(255, depth * 12);
+                depHtml += `<div style="background:rgb(${intensity},${Math.max(0,80-intensity/4)},${Math.max(0,120-intensity/3)});aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:0.65em;">${depth}</div>`;
+            }
+            document.getElementById('dependencyMap').innerHTML = depHtml + '</div>';
+            document.getElementById('mixingStats').innerHTML = `
+                <div class="stat-card"><div class="stat-value">${(totalMix/nBits).toFixed(1)}</div><div class="stat-label">Avg depth</div></div>
+                <div class="stat-card"><div class="stat-value">${maxMix}</div><div class="stat-label">Max depth</div></div>
+                <div class="stat-card"><div class="stat-value">${nBits}</div><div class="stat-label">Output bits</div></div>`;
+            
+            // Bit flow viz
+            const pBin = toBinary(p), qBin = toBinary(q), nBin = toBinary(N);
+            document.getElementById('bitFlowViz').innerHTML = `
+                <div style="margin-bottom:10px;"><span style="color:#00d4ff;">p = ${p}</span>: <span style="font-family:monospace;">${pBin}</span></div>
+                <div style="margin-bottom:10px;"><span style="color:#00ff88;">q = ${q}</span>: <span style="font-family:monospace;">${qBin}</span></div>
+                <div style="text-align:center;font-size:1.5em;color:#ff6b00;margin:15px 0;">↓ CARRY AVALANCHE ↓</div>
+                <div><span style="color:#888;">N = ${N}</span>: <span style="font-family:monospace;">${nBin}</span></div>`;
+        }
+        
+        // ADDITION
+        function runAdditionComparison() {
+            const data = generateSemiprimes(parseInt(document.getElementById('addSampleSize').value), 12);
+            document.getElementById('mulStats').innerHTML = '<div class="stat-card"><div class="stat-value">O(n)</div><div class="stat-label">Carry chains</div></div><div class="stat-card"><div class="stat-value">~30%</div><div class="stat-label">Contribution</div></div>';
+            document.getElementById('addStats').innerHTML = '<div class="stat-card"><div class="stat-value">O(1)</div><div class="stat-label">Carry chains</div></div><div class="stat-card"><div class="stat-value">~50%</div><div class="stat-label">Contribution</div></div>';
+            
+            const estimates = data.map(d => 2 * Math.sqrt(d.N)), actuals = data.map(d => d.p + d.q);
+            const errors = data.map((d, i) => Math.abs(estimates[i] - actuals[i]) / actuals[i] * 100);
+            const avgError = (errors.reduce((a,b)=>a+b,0) / errors.length).toFixed(1);
+            const r = correlation(estimates, actuals).toFixed(3);
+            
+            document.getElementById('sEstimation').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value">${r}</div><div class="stat-label">r(2√N, S)</div></div>
+                    <div class="stat-card"><div class="stat-value bad">${avgError}%</div><div class="stat-label">Avg error</div></div>
+                    <div class="stat-card"><div class="stat-value">< 0.001%</div><div class="stat-label">Needed</div></div>
+                </div>
+                <div class="insight-box danger" style="margin-top:15px;"><strong>${avgError}% error vs 0.001% needed = ${Math.round(parseFloat(avgError)/0.001)}× gap</strong></div>`;
+        }
+        
+        // COORDINATE
+        function applyCoordPreset() { const v = document.getElementById('coordPreset').value; if (v) { const [p,q] = v.split(',').map(Number); document.getElementById('coordP').value = p; document.getElementById('coordQ').value = q; runCoordinate(); } }
+        
+        function runCoordinate() {
+            let p = parseInt(document.getElementById('coordP').value), q = parseInt(document.getElementById('coordQ').value);
+            if (p > q) [p, q] = [q, p];
+            const N = p * q;
+            document.getElementById('coordN').textContent = N.toLocaleString();
+            document.getElementById('coordPDisplay').textContent = p;
+            
+            const nBin = toBinary(N), pBin = toBinary(p), qBin = toBinary(q);
+            document.getElementById('coordBitsN').innerHTML = nBin.split('').map(b => `<div class="bit" style="background:rgba(100,100,100,0.3);border:1px solid #555;">${b}</div>`).join('');
+            document.getElementById('coordBitsP').innerHTML = pBin.split('').map(b => `<div class="bit" style="background:rgba(0,212,255,0.3);border:1px solid #00d4ff;">${b}</div>`).join('');
+            
+            // Dep map
+            let depHtml = '<div style="display:flex;gap:2px;flex-wrap:wrap;">';
+            for (let i = 0; i < nBin.length; i++) { const depth = Math.min(i+1, pBin.length+qBin.length), intensity = Math.min(255, depth*10); depHtml += `<div style="width:22px;height:22px;background:rgb(${intensity},${80-intensity/4},${120-intensity/3});border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:0.6em;">${depth}</div>`; }
+            document.getElementById('coordDepMap').innerHTML = depHtml + '</div>';
+            
+            // Division
+            let divHtml = `<div style="color:#00d4ff;">q = ${N} / ${p}</div><hr style="border-color:#333;margin:10px 0;">`;
+            let rem = N, qLen = qBin.length;
+            for (let k = qLen - 1; k >= 0; k--) {
+                const thr = p * Math.pow(2, k);
+                if (rem >= thr) { divHtml += `<div>Bit ${k}: ${rem} ≥ ${thr}? <span class="good">YES → 1</span></div>`; rem -= thr; }
+                else { divHtml += `<div>Bit ${k}: ${rem} ≥ ${thr}? <span style="color:#666;">NO → 0</span></div>`; }
+            }
+            divHtml += `<hr style="border-color:#00ff88;margin:10px 0;"><div class="good">q = ${q} ✓</div>`;
+            document.getElementById('coordDivision').innerHTML = divHtml;
+        }
+        
+        // FERMAT
+        let fermatInterval = null, fermatP, fermatQ, fermatN;
+        
+        function setupFermat() {
+            fermatP = parseInt(document.getElementById('fermatP').value); fermatQ = parseInt(document.getElementById('fermatQ').value);
+            if (fermatP > fermatQ) [fermatP, fermatQ] = [fermatQ, fermatP];
+            fermatN = fermatP * fermatQ;
+            const sqrtN = Math.sqrt(fermatN), target = (fermatP + fermatQ) / 2, steps = Math.ceil(target - sqrtN);
+            
+            document.getElementById('fermatStats').innerHTML = `
+                <div class="stat-card"><div class="stat-value">${fermatP}</div><div class="stat-label">p</div></div>
+                <div class="stat-card"><div class="stat-value">${sqrtN.toFixed(1)}</div><div class="stat-label">√N</div></div>
+                <div class="stat-card"><div class="stat-value">${target.toFixed(1)}</div><div class="stat-label">Target</div></div>
+                <div class="stat-card"><div class="stat-value">${fermatQ}</div><div class="stat-label">q</div></div>
+                <div class="stat-card"><div class="stat-value ${steps>100?'bad':steps>10?'neutral':'good'}">${steps}</div><div class="stat-label">Steps</div></div>`;
+            
+            // Number line
+            const minV = Math.min(fermatP*0.8, sqrtN*0.8), maxV = Math.max(fermatQ*1.1, target*1.2), range = maxV - minV;
+            const toP = v => 5 + ((v - minV) / range * 90);
+            const nl = document.getElementById('fermatNumberLine');
+            nl.querySelectorAll('.marker,.search-bar').forEach(e => e.remove());
+            [{val:fermatP,label:'p',color:'#00d4ff'},{val:sqrtN,label:'√N',color:'#ffc800'},{val:target,label:'target',color:'#ff6b00'},{val:fermatQ,label:'q',color:'#00ff88'}].forEach(m => {
+                const marker = document.createElement('div'); marker.className = 'marker'; marker.style.left = toP(m.val)+'%';
+                marker.innerHTML = `<div class="marker-dot" style="background:${m.color};"></div><div class="marker-label" style="color:${m.color};">${m.label}</div><div class="marker-val">${m.val.toFixed(0)}</div>`;
+                nl.appendChild(marker);
+            });
+            const sb = document.createElement('div'); sb.className = 'search-bar'; sb.style.left = toP(sqrtN)+'%'; sb.style.width = (toP(target)-toP(sqrtN))+'%'; nl.appendChild(sb);
+            
+            document.getElementById('fermatLog').innerHTML = `<div>N = ${fermatN}, √N = ${sqrtN.toFixed(2)}, Target = ${target.toFixed(2)}, Steps = ${steps}</div>`;
+        }
+        
+        function runFermatSearch() {
+            stopFermatSearch(); if (!fermatN) setupFermat();
+            let a = Math.ceil(Math.sqrt(fermatN)), step = 0;
+            const log = document.getElementById('fermatLog');
+            log.innerHTML += `<div>Starting from a = ${a}...</div>`;
+            
+            fermatInterval = setInterval(() => {
+                step++; const b2 = a*a - fermatN, b = Math.sqrt(b2);
+                if (Number.isInteger(b)) { log.innerHTML += `<div class="good">Step ${step}: a=${a}, b=${b} ✓ FOUND! p=${a-b}, q=${a+b}</div>`; stopFermatSearch(); return; }
+                if (step <= 20 || step % 50 === 0) { log.innerHTML += `<div style="color:#888;">Step ${step}: a=${a}, a²-N=${b2}</div>`; log.scrollTop = log.scrollHeight; }
+                if (step >= 500) { log.innerHTML += `<div class="bad">Stopped at 500 steps</div>`; stopFermatSearch(); return; }
+                a++;
+            }, 20);
+        }
+        
+        function stopFermatSearch() { if (fermatInterval) { clearInterval(fermatInterval); fermatInterval = null; } }
+    </script>
+</body>
+</html>

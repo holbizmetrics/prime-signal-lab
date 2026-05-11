@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p-adic Semiprime Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff6600;
+            margin-bottom: 10px;
+            font-size: 1.6em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #111;
+            border-radius: 8px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        input[type="number"], input[type="text"] {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 120px;
+            font-family: inherit;
+        }
+        
+        button {
+            background: #ff6600;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #ff8833;
+        }
+        
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        
+        button.secondary:hover {
+            background: #666;
+        }
+        
+        .panel {
+            background: #111;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #222;
+        }
+        
+        .panel h2 {
+            color: #ff6600;
+            font-size: 1em;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .panel h3 {
+            color: #00aaff;
+            font-size: 0.95em;
+            margin: 15px 0 10px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.85em;
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        th {
+            color: #888;
+        }
+        
+        .highlight {
+            color: #00ffaa;
+            font-weight: bold;
+        }
+        
+        .warning {
+            color: #ffaa00;
+        }
+        
+        .discovery {
+            color: #ff00ff;
+            font-weight: bold;
+        }
+        
+        .code-block {
+            background: #0a0a0f;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #0a0a0f;
+            border-radius: 4px;
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 0.85em;
+            margin: 10px 0;
+        }
+        
+        .finding {
+            background: #002244;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 3px solid #00aaff;
+        }
+        
+        .finding.positive {
+            border-left-color: #00ff88;
+            background: #002211;
+        }
+        
+        .finding.negative {
+            border-left-color: #ff4444;
+            background: #220011;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔢 p-adic Semiprime Explorer</h1>
+    <p class="subtitle">Explore multiplication structure through p-adic lenses</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="number" id="primeP" value="163">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="number" id="primeQ" value="167">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="analyze()">🔬 Analyze</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomBalanced()">⚖️ Balanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomUnbalanced()">📐 Unbalanced</button>
+        </div>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const smallPrimes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+        
+        const testPrimes = [
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997
+        ];
+        
+        function randomBalanced() {
+            const idx = Math.floor(Math.random() * (testPrimes.length - 5)) + 2;
+            document.getElementById('primeP').value = testPrimes[idx];
+            document.getElementById('primeQ').value = testPrimes[idx + Math.floor(Math.random() * 3) + 1];
+            analyze();
+        }
+        
+        function randomUnbalanced() {
+            const p = testPrimes[Math.floor(Math.random() * 20)];
+            const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 20)];
+            document.getElementById('primeP').value = Math.min(p, q);
+            document.getElementById('primeQ').value = Math.max(p, q);
+            analyze();
+        }
+        
+        // Convert number to digits in base b
+        function toBase(n, base) {
+            if (n === 0) return [0];
+            const digits = [];
+            while (n > 0) {
+                digits.push(n % base);
+                n = Math.floor(n / base);
+            }
+            return digits; // LSB first
+        }
+        
+        // Convert digits back to number
+        function fromBase(digits, base) {
+            let n = 0;
+            for (let i = digits.length - 1; i >= 0; i--) {
+                n = n * base + digits[i];
+            }
+            return n;
+        }
+        
+        // p-adic valuation: highest power of p dividing n
+        function pAdicValuation(n, p) {
+            if (n === 0) return Infinity;
+            let v = 0;
+            while (n % p === 0) {
+                v++;
+                n = Math.floor(n / p);
+            }
+            return v;
+        }
+        
+        // Get p-adic expansion (first k digits)
+        function pAdicExpansion(n, p, k) {
+            const digits = [];
+            for (let i = 0; i < k; i++) {
+                digits.push(n % p);
+                n = Math.floor(n / p);
+            }
+            return digits;
+        }
+        
+        // Multiply in base b, tracking carries
+        function multiplyInBase(a, b, base) {
+            const aDigits = toBase(a, base);
+            const bDigits = toBase(b, base);
+            const width = aDigits.length + bDigits.length;
+            
+            const partials = [];
+            for (let j = 0; j < bDigits.length; j++) {
+                const row = new Array(width).fill(0);
+                let carry = 0;
+                for (let i = 0; i < aDigits.length; i++) {
+                    const prod = aDigits[i] * bDigits[j] + carry;
+                    row[i + j] = prod % base;
+                    carry = Math.floor(prod / base);
+                }
+                if (carry > 0) row[aDigits.length + j] = carry;
+                partials.push(row);
+            }
+            
+            // Sum columns
+            const result = new Array(width).fill(0);
+            const carries = [];
+            let carry = 0;
+            for (let col = 0; col < width; col++) {
+                let sum = carry;
+                for (const row of partials) {
+                    sum += row[col];
+                }
+                result[col] = sum % base;
+                carry = Math.floor(sum / base);
+                carries.push(carry);
+            }
+            
+            return {
+                result: result.slice(0, result.findLastIndex(d => d !== 0) + 1 || 1),
+                carries,
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                partials
+            };
+        }
+        
+        // Analyze structure in different bases
+        function analyzeMultipleBases(p, q, N) {
+            const bases = [2, 3, 5, 7, 10, 16];
+            const sqrtN = Math.floor(Math.sqrt(N));
+            
+            // Add bases near sqrt(N)
+            for (let b = sqrtN - 2; b <= sqrtN + 2; b++) {
+                if (b > 1 && !bases.includes(b)) bases.push(b);
+            }
+            
+            // Sort bases
+            bases.sort((a, b) => a - b);
+            
+            const results = [];
+            for (const base of bases) {
+                const mult = multiplyInBase(p, q, base);
+                const nDigits = toBase(N, base);
+                
+                results.push({
+                    base,
+                    numDigits: nDigits.length,
+                    totalCarry: mult.totalCarry,
+                    carryRatio: mult.totalCarry / (p + q),
+                    digits: nDigits.slice().reverse().map(d => d.toString(base > 10 ? 16 : 10)).join(''),
+                    nearSqrt: Math.abs(base - sqrtN) <= 2
+                });
+            }
+            
+            return results;
+        }
+        
+        // Check if N is close to a perfect square in various bases
+        function analyzeSquareProximity(N) {
+            const sqrtN = Math.sqrt(N);
+            const floorSqrt = Math.floor(sqrtN);
+            const ceilSqrt = Math.ceil(sqrtN);
+            
+            return {
+                sqrtN,
+                floorSqrt,
+                ceilSqrt,
+                floorSquare: floorSqrt * floorSqrt,
+                ceilSquare: ceilSqrt * ceilSqrt,
+                gapBelow: N - floorSqrt * floorSqrt,
+                gapAbove: ceilSqrt * ceilSqrt - N,
+                // Fermat form: N = a² - b² = (a-b)(a+b)
+                // If N = p*q, then a = (p+q)/2, b = (q-p)/2
+                // So a² - N = b²
+                fermatA: (floorSqrt + ceilSqrt) / 2,
+            };
+        }
+        
+        // Analyze modular residues
+        function analyzeModularStructure(p, q, N) {
+            const results = [];
+            
+            for (const m of smallPrimes.slice(0, 15)) {
+                const pMod = p % m;
+                const qMod = q % m;
+                const nMod = N % m;
+                const productMod = (pMod * qMod) % m;
+                
+                results.push({
+                    modulus: m,
+                    pMod,
+                    qMod,
+                    nMod,
+                    consistent: nMod === productMod,
+                    // How many factor pairs (a,b) satisfy a*b ≡ N mod m?
+                    possiblePairs: countFactorPairs(nMod, m)
+                });
+            }
+            
+            return results;
+        }
+        
+        // Count pairs (a,b) where a*b ≡ n mod m
+        function countFactorPairs(n, m) {
+            let count = 0;
+            for (let a = 1; a < m; a++) {
+                for (let b = a; b < m; b++) {
+                    if ((a * b) % m === n) count++;
+                }
+            }
+            return count;
+        }
+        
+        // Hensel lift analysis: can we lift partial factor info?
+        function analyzeHenselStructure(p, q, N) {
+            // For each small prime base, check if factor structure is visible
+            const results = [];
+            
+            for (const base of [2, 3, 5, 7, 11, 13]) {
+                const levels = [];
+                let modulus = 1;
+                
+                for (let k = 1; k <= 6; k++) {
+                    modulus *= base;
+                    if (modulus > N) break;
+                    
+                    const nMod = N % modulus;
+                    const pMod = p % modulus;
+                    const qMod = q % modulus;
+                    
+                    // How constrained are the factors?
+                    // Count how many pairs (a,b) with a*b ≡ N mod modulus
+                    let pairCount = 0;
+                    let foundActual = false;
+                    
+                    // Only count for small moduli (expensive otherwise)
+                    if (modulus <= 1000) {
+                        for (let a = 1; a < modulus; a++) {
+                            const b = findModInverse(a, nMod, modulus);
+                            if (b !== null && b >= a) {
+                                pairCount++;
+                                if ((a === pMod && b === qMod) || (a === qMod && b === pMod)) {
+                                    foundActual = true;
+                                }
+                            }
+                        }
+                    }
+                    
+                    levels.push({
+                        k,
+                        modulus,
+                        nMod,
+                        pMod,
+                        qMod,
+                        pairCount: modulus <= 1000 ? pairCount : '?',
+                        constraint: modulus <= 1000 ? (modulus / pairCount).toFixed(1) : '?'
+                    });
+                }
+                
+                results.push({ base, levels });
+            }
+            
+            return results;
+        }
+        
+        // Find b such that a*b ≡ n mod m (if exists)
+        function findModInverse(a, n, m) {
+            for (let b = 1; b < m; b++) {
+                if ((a * b) % m === n) return b;
+            }
+            return null;
+        }
+        
+        // THE KEY INSIGHT: Analyze carry structure as p-adic information
+        function analyzeCarryPadic(p, q, N) {
+            const base10 = multiplyInBase(p, q, 10);
+            const carries = base10.carries;
+            
+            // The carry sequence IS a p-adic object
+            // Interpret carries as encoding factor information
+            
+            // Hypothesis: carry pattern encodes something about factor structure
+            const carrySum = carries.reduce((a, b) => a + b, 0);
+            const carryPositions = carries.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0);
+            
+            // Check if carry positions relate to factor digit positions
+            const pDigits = toBase(p, 10);
+            const qDigits = toBase(q, 10);
+            
+            // Where do carries happen relative to digit boundaries?
+            const pLen = pDigits.length;
+            const qLen = qDigits.length;
+            
+            return {
+                carries,
+                carrySum,
+                carryPositions,
+                pDigitCount: pLen,
+                qDigitCount: qLen,
+                // Key question: can we recover factor digit count from carries?
+                carryVsDigits: {
+                    totalPositions: carries.length,
+                    activePositions: carryPositions.length,
+                    firstCarry: carryPositions[0] ?? -1,
+                    lastCarry: carryPositions[carryPositions.length - 1] ?? -1,
+                    // Hypothesis: first non-zero carry position relates to smaller factor size
+                    hypothesis: carryPositions.length > 0 ? 
+                        `First carry at position ${carryPositions[0]}, p has ${pLen} digits` : 
+                        'No carries'
+                }
+            };
+        }
+        
+        // Main analysis function
+        function analyze() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const N = p * q;
+            const ratio = (p + q) / (2 * Math.sqrt(N));
+            
+            let html = '';
+            
+            // Header info
+            html += `<div class="panel">`;
+            html += `<h2>📊 Semiprime: N = ${p} × ${q} = ${N.toLocaleString()}</h2>`;
+            html += `<table>`;
+            html += `<tr><td>p + q</td><td class="highlight">${p + q}</td></tr>`;
+            html += `<tr><td>|p - q|</td><td class="highlight">${Math.abs(q - p)}</td></tr>`;
+            html += `<tr><td>√N</td><td>${Math.sqrt(N).toFixed(4)}</td></tr>`;
+            html += `<tr><td>(p+q) / 2√N</td><td class="${ratio < 1.1 ? 'highlight' : 'warning'}">${ratio.toFixed(6)} (${ratio < 1.1 ? 'balanced' : ratio < 2 ? 'moderate' : 'unbalanced'})</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Multi-base analysis
+            html += `<div class="panel">`;
+            html += `<h2>🔢 Multi-Base Carry Analysis</h2>`;
+            html += `<p class="info-text">How does carry structure change across bases?</p>`;
+            
+            const baseResults = analyzeMultipleBases(p, q, N);
+            html += `<table>`;
+            html += `<tr><th>Base</th><th>Digits</th><th>Total Carry</th><th>Carry/(p+q)</th><th>Note</th></tr>`;
+            
+            for (const r of baseResults) {
+                const note = r.nearSqrt ? '<span class="discovery">≈√N</span>' : '';
+                html += `<tr>
+                    <td>${r.base}</td>
+                    <td>${r.numDigits}</td>
+                    <td class="${r.totalCarry === 0 ? 'warning' : ''}">${r.totalCarry}</td>
+                    <td>${r.carryRatio.toFixed(6)}</td>
+                    <td>${note}</td>
+                </tr>`;
+            }
+            html += `</table>`;
+            
+            // Key finding
+            const base10 = baseResults.find(r => r.base === 10);
+            const sqrtBase = baseResults.find(r => r.nearSqrt);
+            
+            if (sqrtBase && sqrtBase.totalCarry !== base10.totalCarry) {
+                html += `<div class="finding positive">`;
+                html += `<strong>📍 Observation:</strong> In base ${sqrtBase.base} (≈√N), `;
+                html += `total carry = ${sqrtBase.totalCarry} vs ${base10.totalCarry} in base 10.`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            // p-adic carry structure
+            html += `<div class="panel">`;
+            html += `<h2>🌀 Carry Structure as p-adic Information</h2>`;
+            
+            const carryAnalysis = analyzeCarryPadic(p, q, N);
+            html += `<div class="code-block">`;
+            html += `Carry sequence: [${carryAnalysis.carries.join(', ')}]\n`;
+            html += `Active positions: [${carryAnalysis.carryPositions.join(', ')}]\n`;
+            html += `Total carry sum: ${carryAnalysis.carrySum}\n\n`;
+            html += `Factor digit counts: p has ${carryAnalysis.pDigitCount}, q has ${carryAnalysis.qDigitCount}\n`;
+            html += `${carryAnalysis.carryVsDigits.hypothesis}`;
+            html += `</div>`;
+            
+            // Can we infer digit counts from carry pattern?
+            html += `<h3>Hypothesis Test: Carry → Factor Digit Count</h3>`;
+            const firstCarry = carryAnalysis.carryVsDigits.firstCarry;
+            const minDigits = Math.min(carryAnalysis.pDigitCount, carryAnalysis.qDigitCount);
+            
+            if (firstCarry >= 0) {
+                const hypothesis = firstCarry + 1; // Position 0 means 1 digit overlap
+                html += `<p>First carry at position ${firstCarry} suggests overlap starting at digit ${firstCarry + 1}</p>`;
+                html += `<p>Smaller factor has ${minDigits} digits</p>`;
+                html += `<p class="${Math.abs(hypothesis - minDigits) <= 1 ? 'highlight' : 'warning'}">`;
+                html += `Match: ${Math.abs(hypothesis - minDigits) <= 1 ? '✓ Close!' : '✗ Not predictive'}`;
+                html += `</p>`;
+            } else {
+                html += `<p class="warning">No carries — factors likely very unbalanced or small</p>`;
+            }
+            
+            html += `</div>`;
+            
+            // Modular structure (CRT view)
+            html += `<div class="panel">`;
+            html += `<h2>🔗 Modular Structure (CRT View)</h2>`;
+            html += `<p class="info-text">N mod m constrains possible factor pairs</p>`;
+            
+            const modResults = analyzeModularStructure(p, q, N);
+            html += `<table>`;
+            html += `<tr><th>mod m</th><th>N mod m</th><th>p mod m</th><th>q mod m</th><th>Possible pairs</th><th>Constraint factor</th></tr>`;
+            
+            for (const r of modResults.slice(0, 10)) {
+                html += `<tr>
+                    <td>${r.modulus}</td>
+                    <td>${r.nMod}</td>
+                    <td class="highlight">${r.pMod}</td>
+                    <td class="highlight">${r.qMod}</td>
+                    <td>${r.possiblePairs}</td>
+                    <td>${(r.modulus / r.possiblePairs).toFixed(1)}x</td>
+                </tr>`;
+            }
+            html += `</table>`;
+            
+            // Combined constraint
+            let totalConstraint = 1;
+            for (const r of modResults.slice(0, 5)) {
+                totalConstraint *= r.modulus / r.possiblePairs;
+            }
+            html += `<p>Combined constraint (first 5 primes): <span class="highlight">${totalConstraint.toFixed(1)}x</span> reduction</p>`;
+            
+            html += `</div>`;
+            
+            // Hensel lifting view
+            html += `<div class="panel">`;
+            html += `<h2>📈 Hensel Lift Structure</h2>`;
+            html += `<p class="info-text">As we increase precision mod p^k, how constrained are factors?</p>`;
+            
+            const henselResults = analyzeHenselStructure(p, q, N);
+            
+            for (const baseResult of henselResults.slice(0, 3)) {
+                html += `<h3>Base ${baseResult.base}</h3>`;
+                html += `<table>`;
+                html += `<tr><th>k</th><th>mod ${baseResult.base}^k</th><th>N mod</th><th>p mod</th><th>q mod</th><th>Pairs</th><th>Constraint</th></tr>`;
+                
+                for (const level of baseResult.levels) {
+                    html += `<tr>
+                        <td>${level.k}</td>
+                        <td>${level.modulus}</td>
+                        <td>${level.nMod}</td>
+                        <td class="highlight">${level.pMod}</td>
+                        <td class="highlight">${level.qMod}</td>
+                        <td>${level.pairCount}</td>
+                        <td>${level.constraint}x</td>
+                    </tr>`;
+                }
+                html += `</table>`;
+            }
+            
+            html += `</div>`;
+            
+            // Square proximity (Fermat connection)
+            html += `<div class="panel">`;
+            html += `<h2>📐 Fermat Structure (N = a² - b²)</h2>`;
+            
+            const sqProx = analyzeSquareProximity(N);
+            html += `<table>`;
+            html += `<tr><td>√N</td><td>${sqProx.sqrtN.toFixed(6)}</td></tr>`;
+            html += `<tr><td>⌊√N⌋² = ${sqProx.floorSqrt}²</td><td>${sqProx.floorSquare}</td></tr>`;
+            html += `<tr><td>⌈√N⌉² = ${sqProx.ceilSqrt}²</td><td>${sqProx.ceilSquare}</td></tr>`;
+            html += `<tr><td>Gap below (N - ⌊√N⌋²)</td><td class="${sqProx.gapBelow < 100 ? 'highlight' : ''}">${sqProx.gapBelow}</td></tr>`;
+            html += `<tr><td>Gap above (⌈√N⌉² - N)</td><td class="${sqProx.gapAbove < 100 ? 'highlight' : ''}">${sqProx.gapAbove}</td></tr>`;
+            html += `</table>`;
+            
+            // Fermat factorization
+            const a = Math.ceil(Math.sqrt(N));
+            const bSquared = a * a - N;
+            const b = Math.sqrt(bSquared);
+            const isSquare = Number.isInteger(b);
+            
+            html += `<h3>Fermat: Start at a = ${a}</h3>`;
+            html += `<p>a² - N = ${a}² - ${N} = ${bSquared}</p>`;
+            html += `<p>√(a² - N) = ${b.toFixed(6)} ${isSquare ? '<span class="highlight">✓ Perfect square!</span>' : ''}</p>`;
+            
+            if (isSquare) {
+                html += `<p class="highlight">Immediate factorization: (${a} - ${b}) × (${a} + ${b}) = ${a - b} × ${a + b}</p>`;
+            } else {
+                // How many steps to find?
+                let steps = 0;
+                let testA = a;
+                while (steps < 1000) {
+                    const testB2 = testA * testA - N;
+                    const testB = Math.sqrt(testB2);
+                    if (Math.abs(testB - Math.round(testB)) < 0.0001) {
+                        break;
+                    }
+                    testA++;
+                    steps++;
+                }
+                html += `<p>Fermat finds factors in <span class="${steps < 100 ? 'highlight' : 'warning'}">${steps}</span> steps</p>`;
+                html += `<p>a = ${testA}, b = ${Math.round(Math.sqrt(testA * testA - N))}</p>`;
+            }
+            
+            html += `</div>`;
+            
+            // Key insights panel
+            html += `<div class="panel">`;
+            html += `<h2>💡 Key Insights</h2>`;
+            
+            // Insight 1: Carry in base √N
+            if (sqrtBase) {
+                html += `<div class="finding">`;
+                html += `<strong>Base √N Representation:</strong> `;
+                html += `In base ${sqrtBase.base} ≈ √${N}, N has ${sqrtBase.numDigits} digits with ${sqrtBase.totalCarry} carries. `;
+                if (sqrtBase.totalCarry === 0 && ratio > 1.5) {
+                    html += `<span class="discovery">Zero carries confirms unbalanced factors!</span>`;
+                } else if (sqrtBase.totalCarry > 0 && ratio < 1.2) {
+                    html += `<span class="highlight">Carries present confirms balanced factors.</span>`;
+                }
+                html += `</div>`;
+            }
+            
+            // Insight 2: CRT constraint
+            html += `<div class="finding">`;
+            html += `<strong>CRT Constraint:</strong> `;
+            html += `Combining residues mod first 5 primes gives ${totalConstraint.toFixed(1)}x constraint. `;
+            html += `This is ${totalConstraint > 10 ? 'significant' : 'weak'} but doesn't approach √N.`;
+            html += `</div>`;
+            
+            // Insight 3: Fermat distance
+            html += `<div class="finding">`;
+            const fermatSteps = Math.ceil((sqProx.ceilSqrt * sqProx.ceilSqrt - N) / (2 * sqProx.ceilSqrt));
+            html += `<strong>Fermat Distance:</strong> `;
+            html += `Gap to nearest square above is ${sqProx.gapAbove}. `;
+            html += `For balanced factors, this equals b² where b = |p-q|/2 = ${Math.abs(q - p) / 2}. `;
+            html += `Expected gap: ${((q - p) / 2) * ((q - p) / 2)} `;
+            html += `(${sqProx.gapAbove === ((q - p) / 2) * ((q - p) / 2) ? '<span class="highlight">✓ Matches!</span>' : 'Check: ' + (sqProx.gapAbove - ((q - p) / 2) * ((q - p) / 2))})`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initialize with default values
+        analyze();
+    </script>
+</body>
+</html>

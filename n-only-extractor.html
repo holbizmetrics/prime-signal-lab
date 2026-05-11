@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Only Signal Extractor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #00ffff; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        button {
+            background: #00ffff; color: #000; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #44ffff; }
+        button.secondary { background: #444; color: #fff; }
+        button.secondary:hover { background: #666; }
+        button.mega { 
+            background: linear-gradient(135deg, #00ffff, #ff00ff); 
+            font-size: 1em; padding: 12px 24px; 
+        }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #00ffff; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #ff00ff; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00ff; font-weight: bold; }
+        .hl-cyan { color: #00ffff; font-weight: bold; }
+        
+        .finding {
+            background: #001833; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #00aaff; font-size: 0.9em;
+        }
+        .finding.positive { border-left-color: #00ff88; background: #001a11; }
+        .finding.negative { border-left-color: #ff4444; background: #1a0011; }
+        .finding.discovery { border-left-color: #ff00ff; background: #1a0018; }
+        .finding.mega { 
+            border-left-color: #00ffff; background: linear-gradient(90deg, #001a1a, #111);
+            border-width: 4px;
+        }
+        .finding.critical {
+            border-left-color: #ffaa00; background: #1a1100;
+            border-width: 4px;
+        }
+        
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+        .stat-box {
+            background: #1a1a2e; padding: 8px 12px; border-radius: 4px;
+            text-align: center; min-width: 80px;
+        }
+        .stat-value { font-size: 1.2em; font-weight: bold; color: #00ffaa; }
+        .stat-label { font-size: 0.65em; color: #888; }
+        
+        .progress-bar {
+            height: 24px; background: #222; border-radius: 4px;
+            margin: 10px 0; overflow: hidden; position: relative;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #00ffff, #ff00ff);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .mega-result {
+            text-align: center; padding: 20px; margin: 15px 0;
+            background: linear-gradient(135deg, #001a1a, #1a001a);
+            border-radius: 8px; border: 2px solid #00ffff;
+        }
+        .mega-result .value {
+            font-size: 2.5em; font-weight: bold;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .mega-result .label { font-size: 0.9em; color: #888; margin-top: 5px; }
+        
+        .code-block {
+            background: #000; padding: 10px; border-radius: 4px;
+            font-family: monospace; font-size: 0.8em; margin: 10px 0;
+            border-left: 2px solid #00ffff; overflow-x: auto;
+        }
+        
+        .tag {
+            display: inline-block; padding: 2px 6px; border-radius: 3px;
+            font-size: 0.7em; margin-left: 5px;
+        }
+        .tag-n-only { background: #006666; color: #00ffff; }
+        .tag-needs-factors { background: #660000; color: #ff6666; }
+        
+        #status { text-align: center; padding: 10px; color: #888; font-style: italic; }
+        
+        .verdict {
+            text-align: center; padding: 30px; margin: 20px 0;
+            border-radius: 12px; font-size: 1.2em;
+        }
+        .verdict.success {
+            background: linear-gradient(135deg, #002200, #001a00);
+            border: 3px solid #00ff00;
+            color: #00ff00;
+        }
+        .verdict.failure {
+            background: linear-gradient(135deg, #220000, #1a0000);
+            border: 3px solid #ff0000;
+            color: #ff6666;
+        }
+        .verdict.partial {
+            background: linear-gradient(135deg, #222200, #1a1a00);
+            border: 3px solid #ffff00;
+            color: #ffff00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 N-Only Signal Extractor</h1>
+    <p class="subtitle">Can we predict factor size difference from N alone?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Sample Size</label>
+            <input type="number" id="sampleSize" value="200">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="mega" onclick="runAnalysis()">🔬 EXTRACT SIGNALS</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runQuick()">⚡ Quick (50)</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163,
+            1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249,
+            1259, 1277, 1279, 1283, 1289, 1291, 1297, 1301, 1303, 1307, 1319, 1321
+        ];
+        
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        
+        function toDigits(n, base) {
+            if (n === 0) return [0];
+            const digits = [];
+            while (n > 0) { digits.push(n % base); n = Math.floor(n / base); }
+            return digits;
+        }
+        
+        function popcount(n) {
+            let count = 0;
+            while (n) { count += n & 1; n >>>= 1; }
+            return count;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        function digitSum(n, base) {
+            return toDigits(n, base).reduce((a, b) => a + b, 0);
+        }
+        
+        function digitCount(n, base) {
+            return toDigits(n, base).length;
+        }
+        
+        // ============================================
+        // N-ONLY FEATURES (computed without knowing p, q)
+        // ============================================
+        
+        function extractNOnlyFeatures(N) {
+            const sqrtN = Math.sqrt(N);
+            const features = {};
+            
+            // Basic N properties
+            features['N_BitLen'] = bitLength(N);
+            features['N_Popcount'] = popcount(N);
+            features['N_PopDensity'] = popcount(N) / bitLength(N);
+            
+            // Distance from perfect square
+            const floorSqrt = Math.floor(sqrtN);
+            const ceilSqrt = Math.ceil(sqrtN);
+            features['N_GapBelow'] = N - floorSqrt * floorSqrt;
+            features['N_GapAbove'] = ceilSqrt * ceilSqrt - N;
+            features['N_GapRatio'] = features['N_GapBelow'] / (features['N_GapAbove'] || 1);
+            features['N_GapMin'] = Math.min(features['N_GapBelow'], features['N_GapAbove']);
+            features['N_FermatDist'] = features['N_GapAbove']; // Distance to next square
+            
+            // Digit representations in various bases
+            for (const base of [2, 3, 5, 7, 10, 12, 16]) {
+                const digits = toDigits(N, base);
+                features[`N_B${base}_DigitCount`] = digits.length;
+                features[`N_B${base}_DigitSum`] = digits.reduce((a, b) => a + b, 0);
+                features[`N_B${base}_MaxDigit`] = Math.max(...digits);
+                features[`N_B${base}_MinDigit`] = Math.min(...digits);
+                features[`N_B${base}_DigitVariance`] = variance(digits);
+                
+                // Leading and trailing digits
+                features[`N_B${base}_LeadDigit`] = digits[digits.length - 1];
+                features[`N_B${base}_TrailDigit`] = digits[0];
+                
+                // Digit balance (how evenly distributed)
+                const digitCounts = {};
+                for (const d of digits) {
+                    digitCounts[d] = (digitCounts[d] || 0) + 1;
+                }
+                const counts = Object.values(digitCounts);
+                features[`N_B${base}_DigitEntropy`] = entropy(counts);
+            }
+            
+            // Modular residues
+            for (const m of [3, 4, 5, 7, 8, 9, 11, 13, 16, 17, 19, 23]) {
+                features[`N_mod${m}`] = N % m;
+            }
+            
+            // Quadratic residue properties
+            features['N_mod4'] = N % 4;
+            features['N_mod8'] = N % 8;
+            
+            // Distance from powers
+            for (const base of [2, 3, 7, 10]) {
+                const logN = Math.log(N) / Math.log(base);
+                const floorLog = Math.floor(logN);
+                const lowerPower = Math.pow(base, floorLog);
+                const upperPower = Math.pow(base, floorLog + 1);
+                features[`N_B${base}_DistFromLower`] = N - lowerPower;
+                features[`N_B${base}_DistFromUpper`] = upperPower - N;
+                features[`N_B${base}_RelPos`] = (N - lowerPower) / (upperPower - lowerPower);
+            }
+            
+            // Continued fraction of sqrt(N)
+            const cfCoeffs = continuedFractionSqrt(N, 10);
+            features['N_CF_FirstCoeff'] = cfCoeffs[0];
+            features['N_CF_SecondCoeff'] = cfCoeffs[1] || 0;
+            features['N_CF_Sum'] = cfCoeffs.reduce((a, b) => a + b, 0);
+            features['N_CF_Max'] = Math.max(...cfCoeffs);
+            
+            // XOR/AND with sqrt approximation
+            const sqrtApprox = Math.floor(sqrtN);
+            features['N_XOR_Sqrt'] = N ^ sqrtApprox;
+            features['N_AND_Sqrt'] = N & sqrtApprox;
+            features['N_XOR_Sqrt_Pop'] = popcount(N ^ sqrtApprox);
+            features['N_AND_Sqrt_Pop'] = popcount(N & sqrtApprox);
+            
+            // High/low half analysis
+            const halfBits = Math.floor(bitLength(N) / 2);
+            const lowMask = (1 << halfBits) - 1;
+            const lowHalf = N & lowMask;
+            const highHalf = N >> halfBits;
+            features['N_HighHalf'] = highHalf;
+            features['N_LowHalf'] = lowHalf;
+            features['N_HalfXOR'] = highHalf ^ lowHalf;
+            features['N_HalfRatio'] = highHalf / (lowHalf || 1);
+            features['N_HalfDiff'] = Math.abs(highHalf - lowHalf);
+            features['N_HalfXOR_Pop'] = popcount(highHalf ^ lowHalf);
+            
+            // Digit pattern analysis
+            const binStr = N.toString(2);
+            features['N_LongestRun1'] = longestRun(binStr, '1');
+            features['N_LongestRun0'] = longestRun(binStr, '0');
+            features['N_Transitions'] = countTransitions(binStr);
+            features['N_RunCount'] = countRuns(binStr);
+            
+            return features;
+        }
+        
+        // ============================================
+        // FACTOR-DEPENDENT FEATURES (ground truth)
+        // ============================================
+        
+        function extractFactorFeatures(p, q) {
+            const N = p * q;
+            const sqrtN = Math.sqrt(N);
+            
+            return {
+                // Balance metrics (TARGETS to predict)
+                'T_BitLenDiff': Math.abs(bitLength(p) - bitLength(q)),
+                'T_BitLenRatio': bitLength(p) / bitLength(q),
+                'T_Ratio': (p + q) / (2 * sqrtN), // Our standard balance ratio
+                'T_LogRatio': Math.abs(Math.log(p) - Math.log(q)),
+                'T_SizeDiff': Math.abs(p - q),
+                'T_RelSizeDiff': Math.abs(p - q) / sqrtN,
+                
+                // Nikhilam features (strong signals we found)
+                'F_B7_NikhDev_P': getNikhilamDev(p, 7),
+                'F_B7_NikhDev_Q': getNikhilamDev(q, 7),
+                'F_B7_NikhDevRatio': Math.abs(getNikhilamDev(p, 7)) / (Math.abs(getNikhilamDev(q, 7)) || 1),
+                
+                // Bit lengths
+                'F_P_BitLen': bitLength(p),
+                'F_Q_BitLen': bitLength(q),
+                'F_BitLenSum': bitLength(p) + bitLength(q),
+                
+                // Popcounts
+                'F_P_Popcount': popcount(p),
+                'F_Q_Popcount': popcount(q),
+                'F_PopDiff': Math.abs(popcount(p) - popcount(q))
+            };
+        }
+        
+        function getNikhilamDev(n, base) {
+            const logN = Math.log(n) / Math.log(base);
+            const power = Math.ceil(logN);
+            const B = Math.pow(base, power);
+            return n - B;
+        }
+        
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        
+        function variance(arr) {
+            const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+            return arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length;
+        }
+        
+        function entropy(counts) {
+            const total = counts.reduce((a, b) => a + b, 0);
+            if (total === 0) return 0;
+            let h = 0;
+            for (const c of counts) {
+                if (c > 0) {
+                    const p = c / total;
+                    h -= p * Math.log2(p);
+                }
+            }
+            return h;
+        }
+        
+        function longestRun(str, char) {
+            const regex = new RegExp(char + '+', 'g');
+            const matches = str.match(regex) || [''];
+            return Math.max(...matches.map(m => m.length));
+        }
+        
+        function countTransitions(str) {
+            let count = 0;
+            for (let i = 1; i < str.length; i++) {
+                if (str[i] !== str[i-1]) count++;
+            }
+            return count;
+        }
+        
+        function countRuns(str) {
+            if (str.length === 0) return 0;
+            let count = 1;
+            for (let i = 1; i < str.length; i++) {
+                if (str[i] !== str[i-1]) count++;
+            }
+            return count;
+        }
+        
+        function continuedFractionSqrt(n, terms) {
+            const a0 = Math.floor(Math.sqrt(n));
+            if (a0 * a0 === n) return [a0]; // Perfect square
+            
+            const coeffs = [a0];
+            let m = 0, d = 1, a = a0;
+            
+            for (let i = 0; i < terms - 1; i++) {
+                m = d * a - m;
+                d = Math.floor((n - m * m) / d);
+                if (d === 0) break;
+                a = Math.floor((a0 + m) / d);
+                coeffs.push(a);
+                if (a === 2 * a0) break; // Period complete
+            }
+            
+            return coeffs;
+        }
+        
+        function correlation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        // ============================================
+        // MAIN ANALYSIS
+        // ============================================
+        
+        async function runAnalysis(sampleSize = 200) {
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+            
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 0%"></div><div class="progress-text">Generating samples...</div></div>`;
+            await sleep(50);
+            
+            // Generate diverse samples
+            const samples = [];
+            const balancedCount = Math.floor(sampleSize * 0.5);
+            
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            for (let i = balancedCount; i < sampleSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 35)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 35)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            // Extract features
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 30%"></div><div class="progress-text">Extracting N-only features...</div></div>`;
+            await sleep(50);
+            
+            const nOnlyData = [];
+            const factorData = [];
+            
+            for (const [p, q] of samples) {
+                const N = p * q;
+                nOnlyData.push(extractNOnlyFeatures(N));
+                factorData.push(extractFactorFeatures(p, q));
+            }
+            
+            // Get feature names
+            const nOnlyNames = Object.keys(nOnlyData[0]);
+            const targetNames = Object.keys(factorData[0]).filter(k => k.startsWith('T_'));
+            
+            // Compute correlations: N-only features vs targets
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 60%"></div><div class="progress-text">Computing correlations...</div></div>`;
+            await sleep(50);
+            
+            const results = {};
+            
+            for (const target of targetNames) {
+                const targetValues = factorData.map(f => f[target]);
+                results[target] = [];
+                
+                for (const feature of nOnlyNames) {
+                    const featureValues = nOnlyData.map(f => f[feature]);
+                    const r = correlation(featureValues, targetValues);
+                    
+                    if (isFinite(r)) {
+                        results[target].push({
+                            feature,
+                            r,
+                            absR: Math.abs(r)
+                        });
+                    }
+                }
+                
+                results[target].sort((a, b) => b.absR - a.absR);
+            }
+            
+            // Also compute: can N-only features predict the strong factor-dependent signals?
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 80%"></div><div class="progress-text">Testing factor signal prediction...</div></div>`;
+            await sleep(50);
+            
+            const nikhDevRatios = factorData.map(f => f['F_B7_NikhDevRatio']);
+            const nikhPrediction = [];
+            
+            for (const feature of nOnlyNames) {
+                const featureValues = nOnlyData.map(f => f[feature]);
+                const r = correlation(featureValues, nikhDevRatios);
+                if (isFinite(r)) {
+                    nikhPrediction.push({ feature, r, absR: Math.abs(r) });
+                }
+            }
+            nikhPrediction.sort((a, b) => b.absR - a.absR);
+            
+            statusEl.innerHTML = '';
+            renderResults(results, nikhPrediction, sampleSize, nOnlyNames.length);
+        }
+        
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+        
+        function renderResults(results, nikhPrediction, sampleSize, featureCount) {
+            let html = '';
+            
+            // Summary
+            html += `<div class="panel">`;
+            html += `<h2>🔬 N-Only Signal Analysis</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${sampleSize}</div><div class="stat-label">Samples</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${featureCount}</div><div class="stat-label">N-Only Features</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${Object.keys(results).length}</div><div class="stat-label">Targets</div></div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // THE BIG QUESTION: Can we predict BitLenDiff from N?
+            const bitLenDiffResults = results['T_BitLenDiff'] || [];
+            const ratioResults = results['T_Ratio'] || [];
+            
+            const bestBitLen = bitLenDiffResults[0];
+            const bestRatio = ratioResults[0];
+            
+            // Verdict
+            const maxCorr = Math.max(bestBitLen?.absR || 0, bestRatio?.absR || 0);
+            
+            let verdictClass, verdictText;
+            if (maxCorr > 0.5) {
+                verdictClass = 'success';
+                verdictText = `✓ SIGNAL FOUND: N-only features can predict factor balance (r = ${maxCorr.toFixed(4)})`;
+            } else if (maxCorr > 0.3) {
+                verdictClass = 'partial';
+                verdictText = `⚠ WEAK SIGNAL: Some predictive power (r = ${maxCorr.toFixed(4)}) but not strong`;
+            } else {
+                verdictClass = 'failure';
+                verdictText = `✗ NO STRONG SIGNAL: N-only features cannot predict factor balance (best r = ${maxCorr.toFixed(4)})`;
+            }
+            
+            html += `<div class="verdict ${verdictClass}">${verdictText}</div>`;
+            
+            // Main results grid
+            html += `<div class="grid-2">`;
+            
+            // BitLenDiff prediction
+            html += `<div class="panel">`;
+            html += `<h3>🎯 Predicting |BitLen(p) - BitLen(q)|</h3>`;
+            html += `<p style="font-size:0.8em;color:#888;margin-bottom:10px;">Can N-only features predict factor size difference?</p>`;
+            html += `<table>`;
+            html += `<tr><th>#</th><th>N-Only Feature</th><th>r</th><th>|r|</th></tr>`;
+            
+            for (let i = 0; i < Math.min(15, bitLenDiffResults.length); i++) {
+                const r = bitLenDiffResults[i];
+                const strength = r.absR > 0.4 ? 'hl-green' : r.absR > 0.25 ? 'hl-yellow' : r.absR > 0.15 ? 'hl-blue' : '';
+                html += `<tr>`;
+                html += `<td>${i + 1}</td>`;
+                html += `<td>${r.feature}</td>`;
+                html += `<td class="${strength}">${r.r.toFixed(4)}</td>`;
+                html += `<td class="${strength}">${r.absR.toFixed(4)}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Balance ratio prediction
+            html += `<div class="panel">`;
+            html += `<h3>🎯 Predicting Balance Ratio</h3>`;
+            html += `<p style="font-size:0.8em;color:#888;margin-bottom:10px;">Can N-only features predict (p+q)/(2√N)?</p>`;
+            html += `<table>`;
+            html += `<tr><th>#</th><th>N-Only Feature</th><th>r</th><th>|r|</th></tr>`;
+            
+            for (let i = 0; i < Math.min(15, ratioResults.length); i++) {
+                const r = ratioResults[i];
+                const strength = r.absR > 0.4 ? 'hl-green' : r.absR > 0.25 ? 'hl-yellow' : r.absR > 0.15 ? 'hl-blue' : '';
+                html += `<tr>`;
+                html += `<td>${i + 1}</td>`;
+                html += `<td>${r.feature}</td>`;
+                html += `<td class="${strength}">${r.r.toFixed(4)}</td>`;
+                html += `<td class="${strength}">${r.absR.toFixed(4)}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end grid
+            
+            // Can we predict Nikhilam DevRatio?
+            html += `<div class="panel">`;
+            html += `<h2>🔮 Can N Predict the Nikhilam DevRatio?</h2>`;
+            html += `<p style="font-size:0.9em;color:#888;margin-bottom:10px;">`;
+            html += `Nikhilam DevRatio (r=0.77 with balance) requires knowing p and q.<br>`;
+            html += `Can any N-only feature predict it?</p>`;
+            
+            const bestNikhPred = nikhPrediction[0];
+            
+            html += `<div class="mega-result">`;
+            html += `<div class="value">${bestNikhPred ? bestNikhPred.absR.toFixed(4) : 'N/A'}</div>`;
+            html += `<div class="label">Best N-only → Nikhilam correlation</div>`;
+            html += `</div>`;
+            
+            html += `<table>`;
+            html += `<tr><th>#</th><th>N-Only Feature</th><th>r with NikhDevRatio</th></tr>`;
+            for (let i = 0; i < Math.min(10, nikhPrediction.length); i++) {
+                const r = nikhPrediction[i];
+                const strength = r.absR > 0.4 ? 'hl-green' : r.absR > 0.25 ? 'hl-yellow' : '';
+                html += `<tr><td>${i+1}</td><td>${r.feature}</td><td class="${strength}">${r.r.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Key findings
+            html += `<div class="panel">`;
+            html += `<h2>💡 Key Findings</h2>`;
+            
+            // Comparison
+            html += `<div class="finding critical">`;
+            html += `<strong>📊 The Gap:</strong><br>`;
+            html += `• Best factor-dependent signal: <span class="hl-cyan">r = 0.93</span> (P_BitLen + Q_BitLen)<br>`;
+            html += `• Best N-only signal: <span class="hl-yellow">r = ${maxCorr.toFixed(4)}</span><br>`;
+            html += `• Gap: <span class="hl-red">${((0.93 - maxCorr) / 0.93 * 100).toFixed(1)}% information lost</span>`;
+            html += `</div>`;
+            
+            if (maxCorr > 0.3) {
+                html += `<div class="finding positive">`;
+                html += `<strong>✓ Partial Signal Exists:</strong><br>`;
+                html += `Some N-only features do correlate with factor balance.<br>`;
+                html += `Best: ${bestRatio?.feature || bestBitLen?.feature} (r = ${maxCorr.toFixed(4)})`;
+                html += `</div>`;
+            } else {
+                html += `<div class="finding negative">`;
+                html += `<strong>✗ Information Theoretic Barrier:</strong><br>`;
+                html += `N-only features cannot strongly predict factor balance.<br>`;
+                html += `The multiplication operation effectively "hides" size difference information.`;
+                html += `</div>`;
+            }
+            
+            // What the top N-only features are
+            const topNOnly = ratioResults.slice(0, 5);
+            html += `<div class="finding">`;
+            html += `<strong>🔍 Top N-Only Signals:</strong><br>`;
+            for (const r of topNOnly) {
+                html += `• ${r.feature}: r = ${r.r.toFixed(4)}<br>`;
+            }
+            html += `</div>`;
+            
+            // The honest conclusion
+            html += `<div class="finding mega">`;
+            html += `<strong>🎯 The Honest Conclusion:</strong><br><br>`;
+            html += `The strong signals (r > 0.7) we found <em>require knowing the factors</em>.<br><br>`;
+            html += `From N alone, we can extract ${maxCorr > 0.3 ? 'weak' : 'very weak'} signals about factor balance.<br><br>`;
+            html += `<strong>This is exactly why factoring is hard:</strong><br>`;
+            html += `Multiplication destroys most information about factor structure.`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function runQuick() {
+            runAnalysis(50);
+        }
+        
+        // Initial message
+        document.getElementById('results').innerHTML = `
+            <div class="panel">
+                <h2>🔬 The Critical Question</h2>
+                <div class="code-block">
+We found: P_BitLen + Q_BitLen → r = 0.93 with balance
+We found: Nikhilam DevRatio → r = 0.77 with balance
+
+BUT: These require knowing p and q!
+
+THE QUESTION: Can we extract similar signals from N alone?
+If yes → potential factoring breakthrough
+If no → confirms why factoring is hard
+                </div>
+                <p style="margin-top:15px;">Click <strong>🔬 EXTRACT SIGNALS</strong> to find out!</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>

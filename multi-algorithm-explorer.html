@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Algorithm Multiplication Observatory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff00aa;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #111;
+            border-radius: 8px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        input[type="number"] {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 120px;
+            font-family: inherit;
+        }
+        
+        button {
+            background: #ff00aa;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #ff44cc;
+        }
+        
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        
+        button.secondary:hover {
+            background: #666;
+        }
+        
+        .panel {
+            background: #111;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #222;
+        }
+        
+        .panel h2 {
+            color: #ff00aa;
+            font-size: 1em;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .panel h3 {
+            color: #00aaff;
+            font-size: 0.95em;
+            margin: 15px 0 10px 0;
+        }
+        
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .algorithm-card {
+            background: #0a0a15;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .algorithm-card h3 {
+            margin-top: 0;
+            color: #ffaa00;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+        
+        .algorithm-card.highlight {
+            border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.85em;
+        }
+        
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        th {
+            color: #888;
+        }
+        
+        .code-block {
+            background: #000;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            font-size: 0.8em;
+            line-height: 1.4;
+            margin: 10px 0;
+        }
+        
+        .highlight-green { color: #00ff88; font-weight: bold; }
+        .highlight-yellow { color: #ffaa00; font-weight: bold; }
+        .highlight-red { color: #ff4444; }
+        .highlight-blue { color: #00aaff; }
+        .highlight-pink { color: #ff00aa; }
+        
+        .signal-meter {
+            background: #222;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .signal-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #004400, #00ff00);
+            border-radius: 2px;
+            margin: 5px 0;
+            transition: width 0.3s;
+        }
+        
+        .comparison-table {
+            background: #0a0a15;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .finding {
+            background: #002244;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 3px solid #00aaff;
+        }
+        
+        .finding.positive {
+            border-left-color: #00ff88;
+            background: #002211;
+        }
+        
+        .finding.negative {
+            border-left-color: #ff4444;
+            background: #220011;
+        }
+        
+        .finding.discovery {
+            border-left-color: #ff00aa;
+            background: #220022;
+        }
+        
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .stat-box {
+            background: #1a1a2e;
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 100px;
+        }
+        
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #00ffaa;
+        }
+        
+        .stat-label {
+            font-size: 0.75em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧮 Multi-Algorithm Multiplication Observatory</h1>
+    <p class="subtitle">Do different multiplication methods reveal different signals about factors?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="number" id="primeP" value="163">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="number" id="primeQ" value="167">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="analyze()">🔬 Analyze All Methods</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomBalanced()">⚖️ Balanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomUnbalanced()">📐 Unbalanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="batchTest()">📊 Batch Test (50)</button>
+        </div>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997
+        ];
+        
+        function randomBalanced() {
+            const idx = Math.floor(Math.random() * (testPrimes.length - 5)) + 2;
+            document.getElementById('primeP').value = testPrimes[idx];
+            document.getElementById('primeQ').value = testPrimes[idx + Math.floor(Math.random() * 3) + 1];
+            analyze();
+        }
+        
+        function randomUnbalanced() {
+            const p = testPrimes[Math.floor(Math.random() * 20)];
+            const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 20)];
+            document.getElementById('primeP').value = Math.min(p, q);
+            document.getElementById('primeQ').value = Math.max(p, q);
+            analyze();
+        }
+        
+        function toDigits(n) {
+            return n.toString().split('').map(Number);
+        }
+        
+        function fromDigits(digits) {
+            return parseInt(digits.join(''));
+        }
+        
+        // ============================================
+        // ALGORITHM 1: Standard (Schoolbook) Method
+        // ============================================
+        function schoolbookMultiply(p, q) {
+            const pDigits = toDigits(p).reverse(); // LSB first
+            const qDigits = toDigits(q).reverse();
+            const width = pDigits.length + qDigits.length;
+            
+            const partials = [];
+            const partialCarries = [];
+            
+            // Compute partial products
+            for (let j = 0; j < qDigits.length; j++) {
+                const row = new Array(width).fill(0);
+                const rowCarries = [];
+                let carry = 0;
+                
+                for (let i = 0; i < pDigits.length; i++) {
+                    const prod = pDigits[i] * qDigits[j] + carry;
+                    row[i + j] = prod % 10;
+                    carry = Math.floor(prod / 10);
+                    rowCarries.push(carry);
+                }
+                if (carry > 0) row[pDigits.length + j] = carry;
+                
+                partials.push(row);
+                partialCarries.push(rowCarries);
+            }
+            
+            // Sum columns
+            const columnCarries = [];
+            const result = new Array(width).fill(0);
+            let carry = 0;
+            
+            for (let col = 0; col < width; col++) {
+                let sum = carry;
+                for (const row of partials) {
+                    sum += row[col];
+                }
+                result[col] = sum % 10;
+                carry = Math.floor(sum / 10);
+                columnCarries.push(carry);
+            }
+            
+            return {
+                name: 'Schoolbook (Standard)',
+                result: p * q,
+                partials,
+                partialCarries,
+                columnCarries,
+                totalCarry: columnCarries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...columnCarries),
+                carryPositions: columnCarries.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0),
+                operations: pDigits.length * qDigits.length,
+                intermediateSum: partials.flat().reduce((a, b) => a + b, 0)
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 2: Vedic - Nikhilam (Base Method)
+        // Multiply numbers close to a base (power of 10)
+        // ============================================
+        function vedicNikhilam(p, q) {
+            // Find nearest base (power of 10)
+            const maxVal = Math.max(p, q);
+            const base = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+            
+            // Deviations from base
+            const devP = p - base; // Usually negative
+            const devQ = q - base;
+            
+            // Nikhilam formula: 
+            // Cross-sum: p + devQ = q + devP (left part)
+            // Product of deviations: devP * devQ (right part)
+            const crossSum = p + devQ; // or q + devP
+            const devProduct = devP * devQ;
+            
+            // The result structure
+            // If devProduct is negative or >= base, needs adjustment
+            let leftPart = crossSum;
+            let rightPart = devProduct;
+            
+            // Adjustment for negative right part
+            let adjustment = 0;
+            if (rightPart < 0) {
+                const rightDigits = Math.ceil(Math.log10(base));
+                adjustment = -1;
+                rightPart = base + rightPart; // Make positive
+            }
+            
+            // Number of carries/adjustments in this method
+            const carries = Math.abs(adjustment);
+            
+            return {
+                name: 'Vedic Nikhilam (Base)',
+                result: p * q,
+                base,
+                devP,
+                devQ,
+                crossSum,
+                devProduct,
+                leftPart: leftPart + adjustment,
+                rightPart,
+                adjustment,
+                totalCarry: carries + (devProduct < 0 ? 1 : 0),
+                // Key insight: deviations encode distance from "round" number
+                deviationSum: Math.abs(devP) + Math.abs(devQ),
+                deviationProduct: Math.abs(devP * devQ),
+                deviationRatio: Math.abs(devP) / Math.abs(devQ) || 0,
+                intermediateSum: Math.abs(crossSum) + Math.abs(devProduct)
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 3: Vedic - Urdhva Tiryak (Vertically & Crosswise)
+        // ============================================
+        function vedicUrdhvaTiryak(p, q) {
+            const pDigits = toDigits(p);
+            const qDigits = toDigits(q);
+            
+            // Pad to same length
+            const maxLen = Math.max(pDigits.length, qDigits.length);
+            while (pDigits.length < maxLen) pDigits.unshift(0);
+            while (qDigits.length < maxLen) qDigits.unshift(0);
+            
+            const n = maxLen;
+            const crossProducts = []; // Each position's cross-product sum
+            const carries = [];
+            
+            // For each result position (0 to 2n-2)
+            // Sum of products where digit indices sum to position
+            for (let pos = 0; pos < 2 * n - 1; pos++) {
+                let sum = 0;
+                const terms = [];
+                
+                for (let i = 0; i < n; i++) {
+                    const j = pos - i;
+                    if (j >= 0 && j < n) {
+                        // Reverse indexing for standard digit order
+                        const pi = pDigits[n - 1 - i];
+                        const qj = qDigits[n - 1 - j];
+                        sum += pi * qj;
+                        terms.push({ i, j, pi, qj, product: pi * qj });
+                    }
+                }
+                
+                crossProducts.push({ pos, sum, terms });
+            }
+            
+            // Now reduce with carries
+            const resultDigits = [];
+            let carry = 0;
+            
+            for (const cp of crossProducts) {
+                const total = cp.sum + carry;
+                resultDigits.push(total % 10);
+                carry = Math.floor(total / 10);
+                carries.push(carry);
+            }
+            if (carry > 0) resultDigits.push(carry);
+            
+            // Key metric: how many cross-terms per position?
+            const crossTermCounts = crossProducts.map(cp => cp.terms.length);
+            const maxCrossTerms = Math.max(...crossTermCounts);
+            
+            return {
+                name: 'Vedic Urdhva-Tiryak (Crosswise)',
+                result: p * q,
+                crossProducts,
+                carries,
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries),
+                crossTermCounts,
+                maxCrossTerms,
+                // Key insight: cross-product pattern might encode factor structure
+                middleCrossSum: crossProducts[Math.floor(crossProducts.length / 2)]?.sum || 0,
+                crossSymmetry: computeSymmetry(crossProducts.map(cp => cp.sum)),
+                intermediateSum: crossProducts.reduce((s, cp) => s + cp.sum, 0)
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 4: Lattice (Chinese/Gelosia) Method
+        // ============================================
+        function latticeMultiply(p, q) {
+            const pDigits = toDigits(p);
+            const qDigits = toDigits(q);
+            
+            // Create lattice grid
+            const rows = qDigits.length;
+            const cols = pDigits.length;
+            
+            // Each cell has upper (tens) and lower (units) triangles
+            const lattice = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    const prod = pDigits[c] * qDigits[r];
+                    row.push({
+                        upper: Math.floor(prod / 10), // tens
+                        lower: prod % 10,             // units
+                        product: prod
+                    });
+                }
+                lattice.push(row);
+            }
+            
+            // Sum along diagonals (this is the key difference!)
+            // Diagonals run from top-right to bottom-left
+            const numDiagonals = rows + cols - 1;
+            const diagonalSums = [];
+            const diagonalCarries = [];
+            
+            let carry = 0;
+            for (let d = numDiagonals - 1; d >= 0; d--) {
+                let sum = carry;
+                const cellsInDiagonal = [];
+                
+                // Collect cells in this diagonal
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        // Upper triangle: diagonal index = r + c
+                        // Lower triangle: diagonal index = r + c + 1
+                        if (r + c === d) {
+                            sum += lattice[r][c].lower;
+                            cellsInDiagonal.push({ r, c, part: 'lower', val: lattice[r][c].lower });
+                        }
+                        if (r + c + 1 === d) {
+                            sum += lattice[r][c].upper;
+                            cellsInDiagonal.push({ r, c, part: 'upper', val: lattice[r][c].upper });
+                        }
+                    }
+                }
+                
+                diagonalSums.unshift({ diagonal: d, sum: sum, cells: cellsInDiagonal });
+                carry = Math.floor(sum / 10);
+                diagonalCarries.unshift(carry);
+            }
+            if (carry > 0) {
+                diagonalSums.unshift({ diagonal: -1, sum: carry, cells: [] });
+            }
+            
+            return {
+                name: 'Lattice (Chinese/Gelosia)',
+                result: p * q,
+                lattice,
+                diagonalSums,
+                diagonalCarries,
+                totalCarry: diagonalCarries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...diagonalCarries),
+                // Key insight: diagonal structure might reveal different patterns
+                diagonalSymmetry: computeSymmetry(diagonalSums.map(d => d.sum)),
+                maxDiagonalSum: Math.max(...diagonalSums.map(d => d.sum)),
+                cellProducts: lattice.flat().map(c => c.product),
+                intermediateSum: lattice.flat().reduce((s, c) => s + c.product, 0)
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 5: Russian Peasant (Binary Doubling)
+        // ============================================
+        function russianPeasantMultiply(p, q) {
+            let a = p;
+            let b = q;
+            let result = 0;
+            
+            const steps = [];
+            let additions = 0;
+            let doublings = 0;
+            
+            while (a > 0) {
+                const addToResult = a % 2 === 1;
+                steps.push({
+                    a,
+                    b,
+                    aOdd: addToResult,
+                    addedToResult: addToResult ? b : 0
+                });
+                
+                if (addToResult) {
+                    result += b;
+                    additions++;
+                }
+                
+                a = Math.floor(a / 2);
+                b = b * 2;
+                doublings++;
+            }
+            
+            // Key insight: this is binary representation of p times q
+            // The "carries" here are the binary digits of p
+            const pBinary = p.toString(2);
+            const setBits = pBinary.split('').filter(b => b === '1').length;
+            
+            return {
+                name: 'Russian Peasant (Binary)',
+                result: p * q,
+                steps,
+                additions,
+                doublings,
+                totalCarry: setBits, // Conceptually, the "carries" are set bits
+                pBinary,
+                qBinary: q.toString(2),
+                setBits,
+                bitLength: pBinary.length,
+                // Key insight: binary structure of factors
+                bitDensity: setBits / pBinary.length,
+                intermediateSum: steps.reduce((s, step) => s + step.addedToResult, 0)
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 6: Karatsuba (Divide & Conquer)
+        // ============================================
+        function karatsubaAnalyze(p, q) {
+            // Karatsuba: split numbers into halves
+            // p = p1 * B + p0, q = q1 * B + q0
+            // p * q = p1*q1*B² + ((p1+p0)*(q1+q0) - p1*q1 - p0*q0)*B + p0*q0
+            
+            const pStr = p.toString();
+            const qStr = q.toString();
+            const maxLen = Math.max(pStr.length, qStr.length);
+            const half = Math.ceil(maxLen / 2);
+            const B = Math.pow(10, half);
+            
+            const p1 = Math.floor(p / B);
+            const p0 = p % B;
+            const q1 = Math.floor(q / B);
+            const q0 = q % B;
+            
+            // Three key products
+            const z2 = p1 * q1;           // high * high
+            const z0 = p0 * q0;           // low * low
+            const z1 = (p1 + p0) * (q1 + q0) - z2 - z0;  // cross term
+            
+            // Result reconstruction
+            const reconstructed = z2 * B * B + z1 * B + z0;
+            
+            return {
+                name: 'Karatsuba (Divide & Conquer)',
+                result: p * q,
+                B,
+                half,
+                p1, p0, q1, q0,
+                z2, z1, z0,
+                reconstructed,
+                // Key insight: the three sub-products
+                totalCarry: 0, // Karatsuba doesn't have traditional carries
+                subProductSum: z2 + z1 + z0,
+                subProductRatio: z1 / (z2 + z0 + 1),
+                // Cross term z1 encodes something about factor structure?
+                crossTermMagnitude: Math.abs(z1),
+                intermediateSum: z2 + z1 + z0
+            };
+        }
+        
+        // ============================================
+        // ALGORITHM 7: Vedic - Vinculum (Bar Numbers)
+        // Use negative digits to minimize carries
+        // ============================================
+        function vedicVinculum(p, q) {
+            // Convert to vinculum form: replace digits > 5 with (10 - digit) and carry
+            // e.g., 8 becomes 1̄2 (negative 1 carry, positive 2)
+            
+            function toVinculum(n) {
+                const digits = toDigits(n).reverse(); // LSB first
+                const vinculum = [];
+                let carry = 0;
+                
+                for (let i = 0; i < digits.length; i++) {
+                    let d = digits[i] + carry;
+                    carry = 0;
+                    
+                    if (d > 5) {
+                        vinculum.push(d - 10); // negative digit
+                        carry = 1;
+                    } else {
+                        vinculum.push(d);
+                    }
+                }
+                if (carry > 0) vinculum.push(carry);
+                
+                return vinculum;
+            }
+            
+            const pVinc = toVinculum(p);
+            const qVinc = toVinculum(q);
+            
+            // Count transformations
+            const pNegDigits = pVinc.filter(d => d < 0).length;
+            const qNegDigits = qVinc.filter(d => d < 0).length;
+            
+            // In vinculum form, products of negative digits become positive
+            // This changes the carry structure!
+            
+            return {
+                name: 'Vedic Vinculum (Bar Numbers)',
+                result: p * q,
+                pVinculum: pVinc.slice().reverse(),
+                qVinculum: qVinc.slice().reverse(),
+                pNegDigits,
+                qNegDigits,
+                totalNegDigits: pNegDigits + qNegDigits,
+                // Key insight: vinculum representation might reveal digit balance
+                negDigitRatio: (pNegDigits + qNegDigits) / (pVinc.length + qVinc.length),
+                maxDigitMagnitude: Math.max(...pVinc.map(Math.abs), ...qVinc.map(Math.abs)),
+                totalCarry: pNegDigits + qNegDigits, // Conceptual carries
+                intermediateSum: pVinc.reduce((s, d) => s + Math.abs(d), 0) + qVinc.reduce((s, d) => s + Math.abs(d), 0)
+            };
+        }
+        
+        // ============================================
+        // Helper Functions
+        // ============================================
+        function computeSymmetry(arr) {
+            if (arr.length < 2) return 1;
+            let diff = 0;
+            for (let i = 0; i < Math.floor(arr.length / 2); i++) {
+                diff += Math.abs(arr[i] - arr[arr.length - 1 - i]);
+            }
+            const total = arr.reduce((a, b) => a + Math.abs(b), 0) || 1;
+            return 1 - diff / total;
+        }
+        
+        function computeCorrelation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length === 0) return 0;
+            
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        // ============================================
+        // Main Analysis
+        // ============================================
+        function analyzeAll(p, q) {
+            return {
+                schoolbook: schoolbookMultiply(p, q),
+                nikhilam: vedicNikhilam(p, q),
+                urdhvaTiryak: vedicUrdhvaTiryak(p, q),
+                lattice: latticeMultiply(p, q),
+                russian: russianPeasantMultiply(p, q),
+                karatsuba: karatsubaAnalyze(p, q),
+                vinculum: vedicVinculum(p, q)
+            };
+        }
+        
+        function analyze() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const N = p * q;
+            const ratio = (p + q) / (2 * Math.sqrt(N));
+            
+            const results = analyzeAll(p, q);
+            
+            let html = '';
+            
+            // Header
+            html += `<div class="panel">`;
+            html += `<h2>📊 N = ${p} × ${q} = ${N.toLocaleString()}</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${ratio.toFixed(4)}</div><div class="stat-label">Balance Ratio</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${Math.abs(q - p)}</div><div class="stat-label">|p - q|</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${ratio < 1.1 ? '⚖️' : ratio < 2 ? '📊' : '📐'}</div><div class="stat-label">${ratio < 1.1 ? 'Balanced' : ratio < 2 ? 'Moderate' : 'Unbalanced'}</div></div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Algorithm comparison grid
+            html += `<div class="algorithm-grid">`;
+            
+            // Schoolbook
+            html += `<div class="algorithm-card">`;
+            html += `<h3>📝 ${results.schoolbook.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Total Carry</td><td class="highlight-green">${results.schoolbook.totalCarry}</td></tr>`;
+            html += `<tr><td>Max Carry</td><td>${results.schoolbook.maxCarry}</td></tr>`;
+            html += `<tr><td>Carry Positions</td><td>[${results.schoolbook.carryPositions.join(', ')}]</td></tr>`;
+            html += `<tr><td>Operations</td><td>${results.schoolbook.operations}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Vedic Nikhilam
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🕉️ ${results.nikhilam.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Base Used</td><td>${results.nikhilam.base}</td></tr>`;
+            html += `<tr><td>Deviation p</td><td class="highlight-yellow">${results.nikhilam.devP}</td></tr>`;
+            html += `<tr><td>Deviation q</td><td class="highlight-yellow">${results.nikhilam.devQ}</td></tr>`;
+            html += `<tr><td>|devP/devQ|</td><td class="highlight-green">${results.nikhilam.deviationRatio.toFixed(4)}</td></tr>`;
+            html += `<tr><td>Dev Product</td><td>${results.nikhilam.devProduct}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Vedic Urdhva-Tiryak
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🕉️ ${results.urdhvaTiryak.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Total Carry</td><td class="highlight-green">${results.urdhvaTiryak.totalCarry}</td></tr>`;
+            html += `<tr><td>Max Cross Terms</td><td>${results.urdhvaTiryak.maxCrossTerms}</td></tr>`;
+            html += `<tr><td>Middle Cross Sum</td><td class="highlight-yellow">${results.urdhvaTiryak.middleCrossSum}</td></tr>`;
+            html += `<tr><td>Cross Symmetry</td><td>${results.urdhvaTiryak.crossSymmetry.toFixed(4)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Lattice
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🀄 ${results.lattice.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Total Carry</td><td class="highlight-green">${results.lattice.totalCarry}</td></tr>`;
+            html += `<tr><td>Max Carry</td><td>${results.lattice.maxCarry}</td></tr>`;
+            html += `<tr><td>Diagonal Symmetry</td><td class="highlight-yellow">${results.lattice.diagonalSymmetry.toFixed(4)}</td></tr>`;
+            html += `<tr><td>Max Diagonal Sum</td><td>${results.lattice.maxDiagonalSum}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Russian Peasant
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🪆 ${results.russian.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Additions</td><td>${results.russian.additions}</td></tr>`;
+            html += `<tr><td>Set Bits in p</td><td class="highlight-green">${results.russian.setBits}</td></tr>`;
+            html += `<tr><td>Bit Density</td><td class="highlight-yellow">${results.russian.bitDensity.toFixed(4)}</td></tr>`;
+            html += `<tr><td>p Binary</td><td style="font-size:0.8em">${results.russian.pBinary}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Karatsuba
+            html += `<div class="algorithm-card">`;
+            html += `<h3>⚡ ${results.karatsuba.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>z₂ (high×high)</td><td>${results.karatsuba.z2}</td></tr>`;
+            html += `<tr><td>z₁ (cross)</td><td class="highlight-yellow">${results.karatsuba.z1}</td></tr>`;
+            html += `<tr><td>z₀ (low×low)</td><td>${results.karatsuba.z0}</td></tr>`;
+            html += `<tr><td>Cross/Total Ratio</td><td class="highlight-green">${results.karatsuba.subProductRatio.toFixed(4)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Vinculum
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🕉️ ${results.vinculum.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>p Vinculum</td><td>[${results.vinculum.pVinculum.join(', ')}]</td></tr>`;
+            html += `<tr><td>q Vinculum</td><td>[${results.vinculum.qVinculum.join(', ')}]</td></tr>`;
+            html += `<tr><td>Negative Digits</td><td class="highlight-green">${results.vinculum.totalNegDigits}</td></tr>`;
+            html += `<tr><td>Neg Digit Ratio</td><td class="highlight-yellow">${results.vinculum.negDigitRatio.toFixed(4)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end algorithm-grid
+            
+            // Key findings
+            html += `<div class="panel">`;
+            html += `<h2>💡 Key Observations</h2>`;
+            
+            // Compare carry structures
+            html += `<div class="finding">`;
+            html += `<strong>Carry Comparison:</strong><br>`;
+            html += `Schoolbook: ${results.schoolbook.totalCarry} | `;
+            html += `Urdhva-Tiryak: ${results.urdhvaTiryak.totalCarry} | `;
+            html += `Lattice: ${results.lattice.totalCarry}<br>`;
+            if (results.schoolbook.totalCarry !== results.lattice.totalCarry) {
+                html += `<span class="highlight-pink">⚠️ Different methods produce different carry counts!</span>`;
+            } else {
+                html += `<span class="highlight-green">Carry counts match across methods.</span>`;
+            }
+            html += `</div>`;
+            
+            // Nikhilam insight
+            if (Math.abs(results.nikhilam.deviationRatio - 1) < 0.3) {
+                html += `<div class="finding positive">`;
+                html += `<strong>Nikhilam Signal:</strong> Deviation ratio ${results.nikhilam.deviationRatio.toFixed(4)} ≈ 1 indicates balanced factors!`;
+                html += `</div>`;
+            } else if (results.nikhilam.deviationRatio > 2 || results.nikhilam.deviationRatio < 0.5) {
+                html += `<div class="finding">`;
+                html += `<strong>Nikhilam Signal:</strong> Deviation ratio ${results.nikhilam.deviationRatio.toFixed(4)} indicates unbalanced factors.`;
+                html += `</div>`;
+            }
+            
+            // Vinculum insight
+            if (results.vinculum.negDigitRatio > 0.3) {
+                html += `<div class="finding">`;
+                html += `<strong>Vinculum Signal:</strong> High negative digit ratio (${results.vinculum.negDigitRatio.toFixed(3)}) — factors have many large digits.`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // ============================================
+        // Batch Test
+        // ============================================
+        function batchTest() {
+            const batchResults = [];
+            
+            // Generate diverse test cases
+            for (let i = 0; i < 50; i++) {
+                let p, q;
+                
+                if (i < 20) {
+                    // Balanced
+                    const idx = Math.floor(Math.random() * (testPrimes.length - 5)) + 2;
+                    p = testPrimes[idx];
+                    q = testPrimes[idx + Math.floor(Math.random() * 3) + 1];
+                } else {
+                    // Unbalanced
+                    p = testPrimes[Math.floor(Math.random() * 20)];
+                    q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 20)];
+                }
+                
+                if (p > q) [p, q] = [q, p];
+                
+                const N = p * q;
+                const ratio = (p + q) / (2 * Math.sqrt(N));
+                const results = analyzeAll(p, q);
+                
+                batchResults.push({
+                    p, q, N, ratio,
+                    schoolbookCarry: results.schoolbook.totalCarry,
+                    latticeCarry: results.lattice.totalCarry,
+                    urdhvaCarry: results.urdhvaTiryak.totalCarry,
+                    nikhilamDevRatio: results.nikhilam.deviationRatio,
+                    crossSymmetry: results.urdhvaTiryak.crossSymmetry,
+                    diagonalSymmetry: results.lattice.diagonalSymmetry,
+                    bitDensity: results.russian.bitDensity,
+                    karatsubaCrossRatio: results.karatsuba.subProductRatio,
+                    vinculumNegRatio: results.vinculum.negDigitRatio
+                });
+            }
+            
+            // Compute correlations with ratio
+            const ratios = batchResults.map(r => r.ratio);
+            
+            const correlations = {
+                'Schoolbook Carry': computeCorrelation(ratios, batchResults.map(r => r.schoolbookCarry)),
+                'Lattice Carry': computeCorrelation(ratios, batchResults.map(r => r.latticeCarry)),
+                'Urdhva Carry': computeCorrelation(ratios, batchResults.map(r => r.urdhvaCarry)),
+                'Nikhilam Dev Ratio': computeCorrelation(ratios, batchResults.map(r => r.nikhilamDevRatio)),
+                'Cross Symmetry': computeCorrelation(ratios, batchResults.map(r => r.crossSymmetry)),
+                'Diagonal Symmetry': computeCorrelation(ratios, batchResults.map(r => r.diagonalSymmetry)),
+                'Bit Density': computeCorrelation(ratios, batchResults.map(r => r.bitDensity)),
+                'Karatsuba Cross Ratio': computeCorrelation(ratios, batchResults.map(r => r.karatsubaCrossRatio)),
+                'Vinculum Neg Ratio': computeCorrelation(ratios, batchResults.map(r => r.vinculumNegRatio))
+            };
+            
+            let html = '';
+            
+            html += `<div class="panel">`;
+            html += `<h2>📊 Batch Test Results (n = ${batchResults.length})</h2>`;
+            html += `<p>Correlations with Balance Ratio (lower = more balanced)</p>`;
+            
+            html += `<table>`;
+            html += `<tr><th>Feature</th><th>Correlation with Ratio</th><th>Strength</th></tr>`;
+            
+            // Sort by absolute correlation
+            const sortedCorrs = Object.entries(correlations).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            for (const [name, corr] of sortedCorrs) {
+                const absCorr = Math.abs(corr);
+                const strength = absCorr > 0.5 ? 'STRONG' : absCorr > 0.3 ? 'moderate' : 'weak';
+                const color = absCorr > 0.5 ? 'highlight-green' : absCorr > 0.3 ? 'highlight-yellow' : '';
+                
+                html += `<tr>`;
+                html += `<td>${name}</td>`;
+                html += `<td class="${color}">${corr.toFixed(4)}</td>`;
+                html += `<td class="${color}">${strength}</td>`;
+                html += `</tr>`;
+            }
+            
+            html += `</table>`;
+            
+            // Find the winner
+            const winner = sortedCorrs[0];
+            html += `<div class="finding ${Math.abs(winner[1]) > 0.4 ? 'positive' : ''}">`;
+            html += `<strong>🏆 Strongest Signal:</strong> ${winner[0]} (r = ${winner[1].toFixed(4)})`;
+            html += `</div>`;
+            
+            // Compare methods
+            html += `<h3>Method Comparison</h3>`;
+            html += `<div class="finding">`;
+            const carryCorrs = [
+                ['Schoolbook', correlations['Schoolbook Carry']],
+                ['Lattice', correlations['Lattice Carry']],
+                ['Urdhva-Tiryak', correlations['Urdhva Carry']]
+            ].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            html += `<strong>Carry Signal Comparison:</strong><br>`;
+            for (const [method, corr] of carryCorrs) {
+                html += `${method}: r = ${corr.toFixed(4)}<br>`;
+            }
+            
+            if (Math.abs(carryCorrs[0][1] - carryCorrs[2][1]) > 0.1) {
+                html += `<br><span class="highlight-pink">🔥 Different methods yield different signal strengths!</span>`;
+            } else {
+                html += `<br><span class="highlight-blue">Methods produce similar signal strengths.</span>`;
+            }
+            html += `</div>`;
+            
+            // Novel signals?
+            const novelSignals = sortedCorrs.filter(([name, corr]) => 
+                !name.includes('Carry') && Math.abs(corr) > 0.25
+            );
+            
+            if (novelSignals.length > 0) {
+                html += `<div class="finding discovery">`;
+                html += `<strong>🆕 Novel Signals (non-carry):</strong><br>`;
+                for (const [name, corr] of novelSignals) {
+                    html += `${name}: r = ${corr.toFixed(4)}<br>`;
+                }
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            // Full data table
+            html += `<div class="panel">`;
+            html += `<h2>📋 Full Dataset</h2>`;
+            html += `<div style="max-height: 400px; overflow-y: auto;">`;
+            html += `<table>`;
+            html += `<tr><th>p × q</th><th>Ratio</th><th>School</th><th>Lattice</th><th>Urdhva</th><th>NikhDev</th><th>CrossSym</th></tr>`;
+            
+            for (const r of batchResults.sort((a, b) => a.ratio - b.ratio)) {
+                html += `<tr>`;
+                html += `<td>${r.p} × ${r.q}</td>`;
+                html += `<td>${r.ratio.toFixed(3)}</td>`;
+                html += `<td>${r.schoolbookCarry}</td>`;
+                html += `<td>${r.latticeCarry}</td>`;
+                html += `<td>${r.urdhvaCarry}</td>`;
+                html += `<td>${r.nikhilamDevRatio.toFixed(3)}</td>`;
+                html += `<td>${r.crossSymmetry.toFixed(3)}</td>`;
+                html += `</tr>`;
+            }
+            
+            html += `</table>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initialize
+        analyze();
+    </script>
+</body>
+</html>

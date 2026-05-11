@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carry Avalanche Visualizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #ffaa00; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 80px; font-family: inherit;
+        }
+        
+        button {
+            background: #ffaa00; color: #000; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #ffcc44; }
+        button.secondary { background: #444; color: #fff; }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #ffaa00; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        
+        .bit-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        
+        .bit-row {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .bit-label {
+            width: 150px;
+            flex-shrink: 0;
+            color: #888;
+            font-size: 0.8em;
+        }
+        
+        .bit {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .bit.zero { background: #1a1a2e; color: #444; }
+        .bit.one { background: #004400; color: #00ff00; }
+        .bit.carry { background: #440000; color: #ff4444; border: 1px solid #ff0000; }
+        .bit.mixed { background: #444400; color: #ffff00; }
+        .bit.destroyed { background: #ff0000; color: #fff; animation: pulse 1s infinite; }
+        .bit.source-p { border: 2px solid #00aaff; }
+        .bit.source-q { border: 2px solid #ff00ff; }
+        .bit.source-both { border: 2px solid #ffaa00; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+            padding: 10px;
+            background: #0a0a0f;
+            border-radius: 4px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8em;
+        }
+        
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        
+        .finding {
+            background: #1a1100; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #ffaa00;
+        }
+        
+        .avalanche-viz {
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .step-header {
+            color: #ffaa00;
+            font-weight: bold;
+            margin: 15px 0 5px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .info-destroyed {
+            color: #ff4444;
+            font-weight: bold;
+        }
+        
+        .info-preserved {
+            color: #00ff00;
+        }
+        
+        .mixing-indicator {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-left: 5px;
+        }
+        
+        .mixing-indicator.low { background: #004400; color: #00ff00; }
+        .mixing-indicator.medium { background: #444400; color: #ffff00; }
+        .mixing-indicator.high { background: #440000; color: #ff4444; }
+        
+        .entropy-bar {
+            height: 20px;
+            background: #222;
+            border-radius: 4px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        
+        .entropy-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .hl-red { color: #ff4444; font-weight: bold; }
+        .hl-green { color: #00ff00; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🌊 Carry Avalanche Visualizer</h1>
+    <p class="subtitle">Watch information get destroyed bit by bit</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="number" id="primeP" value="163">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="number" id="primeQ" value="167">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="visualize()">🌊 Visualize Avalanche</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="setBalanced()">⚖️ Balanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="setUnbalanced()">📐 Unbalanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="stepThrough()">👣 Step Mode</button>
+        </div>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function setBalanced() {
+            document.getElementById('primeP').value = 727;
+            document.getElementById('primeQ').value = 743;
+            visualize();
+        }
+        
+        function setUnbalanced() {
+            document.getElementById('primeP').value = 23;
+            document.getElementById('primeQ').value = 997;
+            visualize();
+        }
+        
+        function toBits(n, width) {
+            return n.toString(2).padStart(width, '0').split('').map(Number);
+        }
+        
+        function fromBits(bits) {
+            return parseInt(bits.join(''), 2);
+        }
+        
+        function popcount(n) {
+            let c = 0;
+            while (n) { c += n & 1; n >>>= 1; }
+            return c;
+        }
+        
+        function visualize() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const N = p * q;
+            
+            const width = Math.max(32, (p * q).toString(2).length + 4);
+            
+            let html = '';
+            
+            // Header info
+            html += `<div class="panel">`;
+            html += `<h2>🔢 Multiplication: ${p} × ${q} = ${N}</h2>`;
+            
+            const ratio = (p + q) / (2 * Math.sqrt(N));
+            html += `<p>Balance ratio: <span class="${ratio < 1.2 ? 'hl-green' : 'hl-yellow'}">${ratio.toFixed(4)}</span></p>`;
+            
+            html += `<div class="legend">`;
+            html += `<div class="legend-item"><div class="legend-box" style="background:#004400"></div> 1 bit</div>`;
+            html += `<div class="legend-item"><div class="legend-box" style="background:#1a1a2e"></div> 0 bit</div>`;
+            html += `<div class="legend-item"><div class="legend-box" style="background:#440000;border:1px solid #ff0000"></div> Carry</div>`;
+            html += `<div class="legend-item"><div class="legend-box" style="background:#444400"></div> Mixed/Modified</div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Step 1: Show inputs
+            html += `<div class="panel">`;
+            html += `<h2>Step 1: Inputs (100% factor information)</h2>`;
+            html += `<div class="avalanche-viz">`;
+            html += renderBitRow('p', toBits(p, width), 'source-p');
+            html += renderBitRow('q', toBits(q, width), 'source-q');
+            html += `</div>`;
+            html += `<div class="finding">`;
+            html += `<strong>Information available:</strong> Full knowledge of both factors. `;
+            html += `Every bit of p and q is known.`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Step 2: Partial products
+            html += `<div class="panel">`;
+            html += `<h2>Step 2: Partial Products (still have p structure)</h2>`;
+            html += `<div class="avalanche-viz">`;
+            
+            const qBits = toBits(q, width);
+            const partials = [];
+            
+            for (let i = 0; i < width; i++) {
+                const bitPos = width - 1 - i;
+                if (qBits[bitPos] === 1) {
+                    const partial = p << i;
+                    partials.push({ shift: i, value: partial });
+                    html += renderBitRow(`p << ${i}`, toBits(partial, width), 'source-p');
+                }
+            }
+            
+            html += `</div>`;
+            html += `<div class="finding">`;
+            html += `<strong>Information:</strong> ${partials.length} partial products. `;
+            html += `Each is just p shifted. We know popcount(q) = ${popcount(q)}, `;
+            html += `and each partial preserves p's bit pattern.`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Step 3: XOR sum (no carries)
+            let xorSum = 0;
+            for (const partial of partials) {
+                xorSum ^= partial.value;
+            }
+            
+            html += `<div class="panel">`;
+            html += `<h2>Step 3: XOR Sum (before carries destroy information)</h2>`;
+            html += `<div class="avalanche-viz">`;
+            html += renderBitRow('XOR Sum', toBits(xorSum, width));
+            html += `</div>`;
+            
+            // Show where bits came from
+            const xorBits = toBits(xorSum, width);
+            const sourceCount = new Array(width).fill(0);
+            
+            for (const partial of partials) {
+                const pBits = toBits(partial.value, width);
+                for (let i = 0; i < width; i++) {
+                    sourceCount[i] += pBits[i];
+                }
+            }
+            
+            html += `<div class="finding">`;
+            html += `<strong>Bit source counts:</strong> Each bit in XOR sum comes from XORing specific partials.<br>`;
+            html += `Bits with <span class="hl-green">odd</span> source count are 1, <span class="hl-red">even</span> source count are 0.<br>`;
+            html += `Source count per position: [${sourceCount.slice(-20).join(', ')}...]`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Step 4: THE CARRY AVALANCHE
+            html += `<div class="panel" style="border-color: #ff0000;">`;
+            html += `<h2 style="color: #ff0000;">Step 4: ☠️ THE CARRY AVALANCHE</h2>`;
+            
+            // Simulate addition with carry tracking
+            const carryTrace = simulateCarryAvalanche(partials, width);
+            
+            html += `<div class="avalanche-viz">`;
+            
+            // Show intermediate sums
+            let runningSum = 0;
+            for (let i = 0; i < Math.min(partials.length, 8); i++) {
+                const before = runningSum;
+                runningSum += partials[i].value;
+                
+                // Find where carries happened
+                const carryGenerated = before & partials[i].value;
+                const resultBits = toBits(runningSum, width);
+                const carryBits = toBits(carryGenerated << 1, width);
+                
+                // Mark which bits were affected by carry
+                const displayBits = resultBits.map((bit, idx) => ({
+                    value: bit,
+                    carry: carryBits[idx] === 1,
+                    mixed: carryTrace.mixingDepth[idx] > 1
+                }));
+                
+                html += renderBitRowWithCarry(`After +partial[${i}]`, displayBits);
+            }
+            
+            if (partials.length > 8) {
+                html += `<div style="color:#666;padding:10px;">... ${partials.length - 8} more additions ...</div>`;
+            }
+            
+            // Final result
+            html += `<div class="step-header">Final Result (N)</div>`;
+            html += renderBitRowWithMixing('N', toBits(N, width), carryTrace.mixingDepth);
+            
+            html += `</div>`;
+            
+            // The key insight: mixing depth
+            html += `<div class="finding" style="background:#1a0000;border-color:#ff0000;">`;
+            html += `<strong>🔥 THE KILLER: Carry Chain Mixing</strong><br><br>`;
+            html += `Each bit in N is now a function of MULTIPLE original bit positions:<br><br>`;
+            
+            const avgMixing = carryTrace.mixingDepth.reduce((a, b) => a + b, 0) / width;
+            const maxMixing = Math.max(...carryTrace.mixingDepth);
+            
+            html += `• Average mixing depth: <span class="hl-red">${avgMixing.toFixed(2)}</span> source positions per output bit<br>`;
+            html += `• Maximum mixing depth: <span class="hl-red">${maxMixing}</span> positions<br>`;
+            html += `• Total carry events: <span class="hl-red">${carryTrace.totalCarries}</span><br><br>`;
+            html += `<strong>This is information destruction:</strong> Output bits are superpositions of input bits.`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Step 5: What survives?
+            html += `<div class="panel">`;
+            html += `<h2>Step 5: What Information Survives?</h2>`;
+            
+            const survivors = analyzeSurvivors(p, q, N, xorSum);
+            
+            html += `<table style="width:100%;font-size:0.85em;">`;
+            html += `<tr><th>Property</th><th>From Factors</th><th>From N</th><th>Survives?</th></tr>`;
+            
+            for (const s of survivors) {
+                const survives = s.survives;
+                html += `<tr>`;
+                html += `<td>${s.name}</td>`;
+                html += `<td>${s.fromFactors}</td>`;
+                html += `<td>${s.fromN}</td>`;
+                html += `<td class="${survives ? 'hl-green' : 'hl-red'}">${survives ? '✓' : '☠️'}</td>`;
+                html += `</tr>`;
+            }
+            
+            html += `</table>`;
+            
+            html += `</div>`;
+            
+            // The mechanism explained
+            html += `<div class="panel">`;
+            html += `<h2>🧬 WHY Carries Destroy Information</h2>`;
+            
+            html += `<div class="finding" style="background:linear-gradient(135deg,#001a00,#1a0000);">`;
+            html += `<strong>The Mathematical Mechanism:</strong><br><br>`;
+            
+            html += `<strong>1. XOR is invertible:</strong><br>`;
+            html += `   If we know XOR(a,b) and a, we can recover b.<br>`;
+            html += `   Information is preserved!<br><br>`;
+            
+            html += `<strong>2. ADD is NOT invertible without carry knowledge:</strong><br>`;
+            html += `   a + b = sum with carries<br>`;
+            html += `   Knowing sum, we CANNOT recover a or b<br>`;
+            html += `   because carries "mix" bit positions<br><br>`;
+            
+            html += `<strong>3. The Avalanche:</strong><br>`;
+            html += `   • Bit[i] depends on Bit[i-1] (carry in)<br>`;
+            html += `   • Bit[i-1] depends on Bit[i-2] (carry chain)<br>`;
+            html += `   • Creates NON-LOCAL dependencies<br>`;
+            html += `   • Original locality of factor bits is DESTROYED<br><br>`;
+            
+            html += `<strong>4. The Result:</strong><br>`;
+            html += `   Each bit in N is a complex Boolean function of MANY factor bits.<br>`;
+            html += `   This function is hard to invert = <span class="hl-red">factoring is hard</span>.`;
+            html += `</div>`;
+            
+            // Visual of mixing
+            html += `<h3>Mixing Depth Per Bit Position</h3>`;
+            html += `<div class="avalanche-viz">`;
+            html += `<div class="bit-row">`;
+            html += `<span class="bit-label">Mixing depth:</span>`;
+            for (let i = width - 20; i < width; i++) {
+                const depth = carryTrace.mixingDepth[i] || 0;
+                const color = depth <= 1 ? '#004400' : depth <= 2 ? '#444400' : '#440000';
+                html += `<div class="bit" style="background:${color};font-size:0.7em;">${depth}</div>`;
+            }
+            html += `</div>`;
+            html += `</div>`;
+            html += `<p style="font-size:0.8em;color:#888;">Higher mixing = more information destroyed at that position</p>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function renderBitRow(label, bits, extraClass = '') {
+            let html = `<div class="bit-row">`;
+            html += `<span class="bit-label">${label}</span>`;
+            
+            // Only show last 24 bits for readability
+            const start = Math.max(0, bits.length - 24);
+            if (start > 0) {
+                html += `<span style="color:#444;margin-right:5px;">...</span>`;
+            }
+            
+            for (let i = start; i < bits.length; i++) {
+                const bit = bits[i];
+                const cls = bit === 1 ? 'one' : 'zero';
+                html += `<div class="bit ${cls} ${extraClass}">${bit}</div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+        
+        function renderBitRowWithCarry(label, bits) {
+            let html = `<div class="bit-row">`;
+            html += `<span class="bit-label">${label}</span>`;
+            
+            const start = Math.max(0, bits.length - 24);
+            if (start > 0) {
+                html += `<span style="color:#444;margin-right:5px;">...</span>`;
+            }
+            
+            for (let i = start; i < bits.length; i++) {
+                const b = bits[i];
+                let cls = b.value === 1 ? 'one' : 'zero';
+                if (b.carry) cls = 'carry';
+                if (b.mixed) cls = 'mixed';
+                html += `<div class="bit ${cls}">${b.value}</div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+        
+        function renderBitRowWithMixing(label, bits, mixingDepth) {
+            let html = `<div class="bit-row">`;
+            html += `<span class="bit-label">${label}</span>`;
+            
+            const start = Math.max(0, bits.length - 24);
+            if (start > 0) {
+                html += `<span style="color:#444;margin-right:5px;">...</span>`;
+            }
+            
+            for (let i = start; i < bits.length; i++) {
+                const bit = bits[i];
+                const depth = mixingDepth[i] || 0;
+                let cls = bit === 1 ? 'one' : 'zero';
+                if (depth > 2) cls = 'destroyed';
+                else if (depth > 1) cls = 'mixed';
+                html += `<div class="bit ${cls}">${bit}</div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+        
+        function simulateCarryAvalanche(partials, width) {
+            // Track which original bit positions contribute to each output bit
+            const mixingDepth = new Array(width).fill(1);
+            let totalCarries = 0;
+            let runningSum = 0;
+            
+            for (const partial of partials) {
+                const before = runningSum;
+                const adding = partial.value;
+                
+                // Where do carries generate?
+                let carryGenerate = before & adding;
+                let carryPropagate = before ^ adding;
+                
+                // Count carry chain lengths
+                let carry = carryGenerate;
+                while (carry) {
+                    totalCarries += popcount(carry);
+                    
+                    // Each carry increases mixing at that position
+                    let temp = carry;
+                    let pos = 0;
+                    while (temp) {
+                        if (temp & 1) {
+                            // This position receives a carry from below
+                            // Increase mixing depth
+                            for (let j = pos; j < width && j < pos + 10; j++) {
+                                mixingDepth[j]++;
+                            }
+                        }
+                        temp >>>= 1;
+                        pos++;
+                    }
+                    
+                    // Propagate carry
+                    carry = (carry << 1) & carryPropagate;
+                    carryPropagate = carryPropagate ^ carry;
+                }
+                
+                runningSum = before + adding;
+            }
+            
+            return { mixingDepth, totalCarries };
+        }
+        
+        function analyzeSurvivors(p, q, N, xorSum) {
+            const sqrtN = Math.sqrt(N);
+            
+            return [
+                {
+                    name: 'Product',
+                    fromFactors: `${p} × ${q}`,
+                    fromN: N,
+                    survives: true
+                },
+                {
+                    name: 'Bit length sum',
+                    fromFactors: p.toString(2).length + q.toString(2).length,
+                    fromN: `${N.toString(2).length} ±1`,
+                    survives: true
+                },
+                {
+                    name: 'Factor ratio',
+                    fromFactors: (q / p).toFixed(4),
+                    fromN: '???',
+                    survives: false
+                },
+                {
+                    name: 'Factor difference',
+                    fromFactors: Math.abs(q - p),
+                    fromN: '???',
+                    survives: false
+                },
+                {
+                    name: 'Individual factors',
+                    fromFactors: `${p}, ${q}`,
+                    fromN: '???',
+                    survives: false
+                },
+                {
+                    name: 'popcount(p) + popcount(q)',
+                    fromFactors: popcount(p) + popcount(q),
+                    fromN: `≈${popcount(N)} (not equal)`,
+                    survives: false
+                },
+                {
+                    name: 'Distance to √N',
+                    fromFactors: `p-√N=${(p - sqrtN).toFixed(1)}, q-√N=${(q - sqrtN).toFixed(1)}`,
+                    fromN: 'Only know N-(√N)²',
+                    survives: false // partial
+                },
+                {
+                    name: 'XOR sum structure',
+                    fromFactors: xorSum,
+                    fromN: `Hidden (N = ${N} ≠ ${xorSum})`,
+                    survives: false
+                }
+            ];
+        }
+        
+        let stepMode = false;
+        let currentStep = 0;
+        
+        function stepThrough() {
+            stepMode = true;
+            currentStep = 0;
+            document.getElementById('results').innerHTML = `
+                <div class="panel">
+                    <h2>👣 Step Mode</h2>
+                    <p>Click to advance through each multiplication step</p>
+                    <button onclick="nextStep()">Next Step →</button>
+                </div>
+            `;
+            nextStep();
+        }
+        
+        function nextStep() {
+            // Implementation of step-through mode would go here
+            visualize();
+        }
+        
+        // Initial
+        visualize();
+    </script>
+</body>
+</html>

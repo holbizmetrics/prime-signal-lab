@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 ABLATION: Find the Optimal Signal Combination</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0d0d1a 100%); color: #e0e0e0; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { font-size: 1.8em; margin-bottom: 10px; background: linear-gradient(135deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.2em; margin: 20px 0 15px 0; color: #00d4ff; }
+        h3 { font-size: 1em; margin: 15px 0 10px 0; color: #ffc800; }
+        .subtitle { color: #888; margin-bottom: 20px; }
+        .panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-group label { font-size: 0.8em; color: #aaa; }
+        input, select { padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 0.95em; width: 120px; }
+        button { padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #00ffff, #0088ff); color: #000; font-size: 1.1em; }
+        button:hover { transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .insight-box { background: rgba(0, 255, 255, 0.1); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .insight-box.success { background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); }
+        .insight-box.best { background: rgba(255, 255, 0, 0.1); border-color: rgba(255, 255, 0, 0.5); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 10px 0; }
+        th, td { padding: 8px; text-align: center; border: 1px solid #333; }
+        th { background: rgba(0, 255, 255, 0.2); }
+        .good { color: #00ff88; font-weight: bold; }
+        .excellent { color: #ff00ff; font-weight: bold; }
+        .best { color: #ffff00; font-weight: bold; }
+        .bad { color: #ff4444; }
+        .neutral { color: #ffc800; }
+        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0; }
+        .stat-box { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; min-width: 120px; text-align: center; flex: 1; }
+        .stat-value { font-size: 1.5em; font-weight: bold; }
+        .stat-label { font-size: 0.75em; color: #888; margin-top: 5px; }
+        .matrix { display: grid; gap: 2px; margin: 15px 0; }
+        .matrix-cell { padding: 8px; text-align: center; font-size: 0.75em; border-radius: 4px; }
+        .log-area { font-family: monospace; font-size: 0.8em; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; max-height: 200px; overflow-y: auto; }
+        .combo-card { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+        .combo-card.top { border: 2px solid #ffff00; background: rgba(255,255,0,0.1); }
+        .progress { height: 24px; background: rgba(0,0,0,0.3); border-radius: 12px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85em; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 ABLATION: Find the Optimal Signal Combination</h1>
+        <p class="subtitle">Not all features together — find which PAIRS are synergistic</p>
+        
+        <div class="panel">
+            <h2>The Hypothesis</h2>
+            <div class="insight-box">
+                <strong>Problem:</strong> All features together = 86.8% (worse than baseline 87.1%)<br><br>
+                <strong>Insight:</strong> Some features are redundant, some add noise<br><br>
+                <strong>Solution:</strong> Test each category alone, then test PAIRS to find synergy
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Samples</label>
+                <input type="number" id="samples" value="200" min="100" max="400">
+            </div>
+            <div class="control-group">
+                <label>Factor Bits</label>
+                <select id="bitSize">
+                    <option value="16">16-bit</option>
+                    <option value="20" selected>20-bit</option>
+                    <option value="24">24-bit</option>
+                </select>
+            </div>
+            <button class="btn-primary" id="runBtn" onclick="runAblation()">🔬 Run Ablation Study</button>
+        </div>
+        
+        <div class="panel">
+            <h2>📊 Individual Category Performance</h2>
+            <div id="individualResults">
+                <p style="color: #666;">Testing each feature category alone...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🔗 Pairwise Combinations</h2>
+            <p style="color: #888; margin-bottom: 10px;">Which pairs are synergistic (better than either alone)?</p>
+            <div id="pairResults">
+                <p style="color: #666;">Testing all pairs...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>📈 Synergy Matrix</h2>
+            <p style="color: #888; margin-bottom: 10px;">Green = synergy (pair > max individual), Red = redundant</p>
+            <div id="synergyMatrix">
+                <p style="color: #666;">Building matrix...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🏆 Top Combinations</h2>
+            <div id="topCombos">
+                <p style="color: #666;">Finding optimal combinations...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🎯 Optimal Configuration</h2>
+            <div id="optimalConfig">
+                <div class="insight-box">Run ablation to discover the best feature combination...</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>📝 Log</h2>
+            <div class="log-area" id="logArea">Waiting...</div>
+        </div>
+    </div>
+    
+    <script>
+        function log(msg) {
+            const area = document.getElementById('logArea');
+            area.textContent += msg + '\n';
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        function isPrime(n) {
+            if (n < 2) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(n); i += 2) if (n % i === 0) return false;
+            return true;
+        }
+        
+        function randomPrime(min, max) {
+            let p, attempts = 0;
+            do { 
+                p = Math.floor(Math.random() * (max - min)) + min;
+                if (++attempts > 10000) throw new Error("Prime search failed");
+            } while (!isPrime(p));
+            return p;
+        }
+        
+        function toBinary(n, pad = 0) {
+            return n.toString(2).padStart(pad, '0');
+        }
+        
+        function computeTrace(p, q) {
+            if (p > q) [p, q] = [q, p];
+            const N = p * q;
+            const nBin = toBinary(N);
+            const maxBits = nBin.length;
+            const trace = [];
+            let carry = 0;
+            
+            for (let pos = 0; pos < maxBits; pos++) {
+                let onesCount = 0;
+                for (let j = 0; j <= pos; j++) {
+                    onesCount += ((p >> (pos - j)) & 1) * ((q >> j) & 1);
+                }
+                const totalSum = onesCount + carry;
+                const carryOut = Math.floor(totalSum / 2);
+                trace.push({ position: pos, carryOut: carryOut > 0 ? 1 : 0, nBit: parseInt(nBin[maxBits - 1 - pos] || '0') });
+                carry = carryOut;
+            }
+            return { p, q, N, nBin, trace, maxBits };
+        }
+        
+        // === FEATURE CATEGORIES ===
+        
+        // Category A: Core local (the essentials)
+        function extractCoreLocal(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            return {
+                nBit: parseInt(nBin[maxBits - 1 - pos] || '0'),
+                prevBit: pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0,
+                relativePos: pos / maxBits
+            };
+        }
+        
+        // Category B: Run patterns
+        function extractRunPatterns(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            
+            const curr = nBin[maxBits - 1 - pos];
+            let runLen = 1;
+            for (let d = 1; pos + d < maxBits && nBin[maxBits - 1 - pos - d] === curr; d++) runLen++;
+            for (let d = 1; pos - d >= 0 && nBin[maxBits - pos + d] === curr; d++) runLen++;
+            f.runLength = runLen / maxBits;
+            
+            // Zeros before (carry chain indicator)
+            let zerosBefore = 0;
+            for (let i = pos - 1; i >= 0 && nBin[maxBits - 1 - i] === '0'; i--) zerosBefore++;
+            f.zerosBefore = zerosBefore / maxBits;
+            
+            return f;
+        }
+        
+        // Category C: Transition patterns
+        function extractTransitions(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            
+            const curr = parseInt(nBin[maxBits - 1 - pos] || '0');
+            const prev = pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0;
+            
+            f.zeroAfterOne = (curr === 0 && prev === 1) ? 1 : 0;
+            f.oneAfterZero = (curr === 1 && prev === 0) ? 1 : 0;
+            f.sameAsPrev = (curr === prev) ? 1 : 0;
+            
+            return f;
+        }
+        
+        // Category D: Global statistics
+        function extractGlobalStats(N, maxBits) {
+            const bin = toBinary(N);
+            const f = {};
+            
+            const oneRuns = bin.match(/1+/g) || [];
+            const zeroRuns = bin.match(/0+/g) || [];
+            
+            f.maxOneRun = Math.max(0, ...oneRuns.map(r => r.length)) / maxBits;
+            f.maxZeroRun = Math.max(0, ...zeroRuns.map(r => r.length)) / maxBits;
+            
+            let adj = 0, tot = 0;
+            for (let i = 0; i < bin.length; i++) {
+                if (bin[i] === '1') {
+                    tot++;
+                    if (i > 0 && bin[i-1] === '1') adj++;
+                }
+            }
+            f.clustering = tot > 0 ? adj / tot : 0;
+            
+            return f;
+        }
+        
+        // Category E: Neighborhood (extended local)
+        function extractNeighborhood(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            
+            f.prev2 = pos > 1 ? parseInt(nBin[maxBits - pos + 1] || '0') : 0;
+            f.next1 = pos < maxBits - 1 ? parseInt(nBin[maxBits - 2 - pos] || '0') : 0;
+            f.next2 = pos < maxBits - 2 ? parseInt(nBin[maxBits - 3 - pos] || '0') : 0;
+            
+            // 3-bit window popcount
+            let windowPop = 0;
+            for (let d = -1; d <= 1; d++) {
+                const p = pos + d;
+                if (p >= 0 && p < maxBits) {
+                    windowPop += parseInt(nBin[maxBits - 1 - p] || '0');
+                }
+            }
+            f.windowPop = windowPop / 3;
+            
+            return f;
+        }
+        
+        // Category F: Cumulative features
+        function extractCumulative(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            
+            let cumPop = 0;
+            for (let i = 0; i <= pos; i++) cumPop += parseInt(nBin[maxBits - 1 - i] || '0');
+            f.cumPopRatio = cumPop / (pos + 1);
+            
+            // Expected vs actual density
+            const totalPop = nBin.split('').filter(b => b === '1').length;
+            const expectedPop = totalPop * (pos + 1) / maxBits;
+            f.densityDelta = (cumPop - expectedPop) / maxBits;
+            
+            return f;
+        }
+        
+        const CATEGORIES = {
+            'A: Core Local': { extract: extractCoreLocal, features: ['nBit', 'prevBit', 'relativePos'] },
+            'B: Run Patterns': { extract: extractRunPatterns, features: ['runLength', 'zerosBefore'] },
+            'C: Transitions': { extract: extractTransitions, features: ['zeroAfterOne', 'oneAfterZero', 'sameAsPrev'] },
+            'D: Global Stats': { extract: extractGlobalStats, features: ['maxOneRun', 'maxZeroRun', 'clustering'], isGlobal: true },
+            'E: Neighborhood': { extract: extractNeighborhood, features: ['prev2', 'next1', 'next2', 'windowPop'] },
+            'F: Cumulative': { extract: extractCumulative, features: ['cumPopRatio', 'densityDelta'] }
+        };
+        
+        // === TRAINING AND PREDICTION ===
+        
+        function trainModel(data, categoryNames) {
+            const weights = { bias: 0 };
+            const allFeatures = [];
+            
+            categoryNames.forEach(name => {
+                CATEGORIES[name].features.forEach(f => {
+                    weights[f] = Math.random() * 0.4 - 0.2;
+                    allFeatures.push(f);
+                });
+            });
+            
+            const lr = 0.08;
+            const epochs = 35;
+            
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                for (const d of data) {
+                    const globalFeatures = {};
+                    categoryNames.forEach(name => {
+                        if (CATEGORIES[name].isGlobal) {
+                            Object.assign(globalFeatures, CATEGORIES[name].extract(d.N, d.maxBits));
+                        }
+                    });
+                    
+                    for (let pos = 0; pos < d.trace.length; pos++) {
+                        const features = { ...globalFeatures };
+                        categoryNames.forEach(name => {
+                            if (!CATEGORIES[name].isGlobal) {
+                                Object.assign(features, CATEGORIES[name].extract(d.N, pos, d.maxBits));
+                            }
+                        });
+                        
+                        const target = d.trace[pos].carryOut;
+                        
+                        let score = weights.bias;
+                        allFeatures.forEach(f => {
+                            score += (weights[f] || 0) * (features[f] || 0);
+                        });
+                        
+                        const prob = 1 / (1 + Math.exp(-score));
+                        const error = target - prob;
+                        const grad = error * prob * (1 - prob);
+                        
+                        weights.bias += lr * grad;
+                        allFeatures.forEach(f => {
+                            weights[f] += lr * grad * (features[f] || 0);
+                        });
+                    }
+                }
+            }
+            
+            return { weights, features: allFeatures };
+        }
+        
+        function evaluate(testData, model, categoryNames) {
+            let correct = 0, total = 0, perfect = 0;
+            
+            for (const d of testData) {
+                const globalFeatures = {};
+                categoryNames.forEach(name => {
+                    if (CATEGORIES[name].isGlobal) {
+                        Object.assign(globalFeatures, CATEGORIES[name].extract(d.N, d.maxBits));
+                    }
+                });
+                
+                let sampleCorrect = 0;
+                
+                for (let pos = 0; pos < d.trace.length; pos++) {
+                    const features = { ...globalFeatures };
+                    categoryNames.forEach(name => {
+                        if (!CATEGORIES[name].isGlobal) {
+                            Object.assign(features, CATEGORIES[name].extract(d.N, pos, d.maxBits));
+                        }
+                    });
+                    
+                    let score = model.weights.bias;
+                    model.features.forEach(f => {
+                        score += (model.weights[f] || 0) * (features[f] || 0);
+                    });
+                    
+                    const prob = 1 / (1 + Math.exp(-score));
+                    const pred = prob > 0.5 ? 1 : 0;
+                    const actual = d.trace[pos].carryOut;
+                    
+                    total++;
+                    if (pred === actual) { correct++; sampleCorrect++; }
+                }
+                
+                if (sampleCorrect === d.trace.length) perfect++;
+            }
+            
+            return { accuracy: correct / total, perfectRate: perfect / testData.length, perfectCount: perfect };
+        }
+        
+        function generateData(n, bits) {
+            const data = [];
+            const min = Math.pow(2, bits - 1);
+            const max = Math.pow(2, bits);
+            
+            for (let i = 0; i < n; i++) {
+                const p = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                const q = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                data.push(computeTrace(Math.min(p, q), Math.max(p, q)));
+            }
+            return data;
+        }
+        
+        // === MAIN ===
+        
+        async function runAblation() {
+            const samples = parseInt(document.getElementById('samples').value);
+            const bits = parseInt(document.getElementById('bitSize').value);
+            
+            document.getElementById('runBtn').disabled = true;
+            document.getElementById('logArea').textContent = '';
+            
+            log(`Starting ablation study: ${samples} samples at ${bits}-bit`);
+            
+            const data = generateData(samples, bits);
+            const trainSize = Math.floor(samples * 0.7);
+            const trainData = data.slice(0, trainSize);
+            const testData = data.slice(trainSize);
+            
+            log(`Train: ${trainData.length}, Test: ${testData.length}`);
+            
+            const categoryNames = Object.keys(CATEGORIES);
+            const individualResults = {};
+            const pairResults = {};
+            
+            // === TEST INDIVIDUALS ===
+            log('\n--- Testing Individual Categories ---');
+            
+            for (const name of categoryNames) {
+                const model = trainModel(trainData, [name]);
+                const result = evaluate(testData, model, [name]);
+                individualResults[name] = result;
+                log(`${name}: ${(result.accuracy * 100).toFixed(1)}%`);
+                await new Promise(r => setTimeout(r, 10));
+            }
+            
+            displayIndividualResults(individualResults);
+            
+            // === TEST PAIRS ===
+            log('\n--- Testing Pairs ---');
+            
+            for (let i = 0; i < categoryNames.length; i++) {
+                for (let j = i + 1; j < categoryNames.length; j++) {
+                    const pair = [categoryNames[i], categoryNames[j]];
+                    const pairKey = pair.join(' + ');
+                    
+                    const model = trainModel(trainData, pair);
+                    const result = evaluate(testData, model, pair);
+                    pairResults[pairKey] = {
+                        ...result,
+                        categories: pair,
+                        individual1: individualResults[pair[0]].accuracy,
+                        individual2: individualResults[pair[1]].accuracy
+                    };
+                    
+                    const maxIndividual = Math.max(pairResults[pairKey].individual1, pairResults[pairKey].individual2);
+                    const synergy = result.accuracy - maxIndividual;
+                    pairResults[pairKey].synergy = synergy;
+                    
+                    const synergyStr = synergy > 0 ? `+${(synergy * 100).toFixed(1)}%` : `${(synergy * 100).toFixed(1)}%`;
+                    log(`${pairKey}: ${(result.accuracy * 100).toFixed(1)}% (synergy: ${synergyStr})`);
+                    
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+            
+            displayPairResults(pairResults, individualResults);
+            displaySynergyMatrix(categoryNames, individualResults, pairResults);
+            
+            // === TEST BEST TRIPLES ===
+            log('\n--- Testing Top Triples ---');
+            
+            const sortedPairs = Object.entries(pairResults).sort((a, b) => b[1].accuracy - a[1].accuracy);
+            const tripleResults = {};
+            
+            // Take top 3 pairs and try adding each remaining category
+            for (let i = 0; i < Math.min(3, sortedPairs.length); i++) {
+                const [pairKey, pairData] = sortedPairs[i];
+                const pairCats = pairData.categories;
+                
+                for (const cat of categoryNames) {
+                    if (!pairCats.includes(cat)) {
+                        const triple = [...pairCats, cat];
+                        const tripleKey = triple.join(' + ');
+                        
+                        if (!tripleResults[tripleKey]) {
+                            const model = trainModel(trainData, triple);
+                            const result = evaluate(testData, model, triple);
+                            tripleResults[tripleKey] = {
+                                ...result,
+                                categories: triple,
+                                basePairAcc: pairData.accuracy,
+                                improvement: result.accuracy - pairData.accuracy
+                            };
+                            log(`${tripleKey}: ${(result.accuracy * 100).toFixed(1)}%`);
+                        }
+                    }
+                }
+            }
+            
+            displayTopCombos(individualResults, pairResults, tripleResults);
+            displayOptimalConfig(individualResults, pairResults, tripleResults, bits);
+            
+            log('\n=== Ablation complete ===');
+            document.getElementById('runBtn').disabled = false;
+        }
+        
+        function displayIndividualResults(results) {
+            const sorted = Object.entries(results).sort((a, b) => b[1].accuracy - a[1].accuracy);
+            
+            let html = '<table><tr><th>Category</th><th>Accuracy</th><th>Perfect</th><th>Rank</th></tr>';
+            
+            sorted.forEach(([name, r], idx) => {
+                const cls = r.accuracy >= 0.85 ? 'good' : r.accuracy >= 0.75 ? 'neutral' : '';
+                html += `<tr>`;
+                html += `<td>${name}</td>`;
+                html += `<td class="${cls}">${(r.accuracy * 100).toFixed(1)}%</td>`;
+                html += `<td>${r.perfectCount}</td>`;
+                html += `<td>${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</table>';
+            
+            const best = sorted[0];
+            html += `<div class="insight-box"><strong>Best individual:</strong> ${best[0]} at ${(best[1].accuracy * 100).toFixed(1)}%</div>`;
+            
+            document.getElementById('individualResults').innerHTML = html;
+        }
+        
+        function displayPairResults(pairResults, individualResults) {
+            const sorted = Object.entries(pairResults).sort((a, b) => b[1].accuracy - a[1].accuracy);
+            
+            let html = '<table><tr><th>Combination</th><th>Accuracy</th><th>Synergy</th><th>Perfect</th></tr>';
+            
+            sorted.forEach(([name, r]) => {
+                const accCls = r.accuracy >= 0.9 ? 'best' : r.accuracy >= 0.85 ? 'good' : r.accuracy >= 0.8 ? 'neutral' : '';
+                const synCls = r.synergy > 0.02 ? 'good' : r.synergy > 0 ? 'neutral' : 'bad';
+                const synergyStr = r.synergy > 0 ? `+${(r.synergy * 100).toFixed(1)}%` : `${(r.synergy * 100).toFixed(1)}%`;
+                
+                html += `<tr>`;
+                html += `<td style="text-align: left;">${name}</td>`;
+                html += `<td class="${accCls}">${(r.accuracy * 100).toFixed(1)}%</td>`;
+                html += `<td class="${synCls}">${synergyStr}</td>`;
+                html += `<td>${r.perfectCount}</td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</table>';
+            
+            // Find synergistic pairs
+            const synergistic = sorted.filter(([_, r]) => r.synergy > 0.01);
+            if (synergistic.length > 0) {
+                html += '<div class="insight-box success"><strong>Synergistic pairs found!</strong><br>';
+                synergistic.slice(0, 3).forEach(([name, r]) => {
+                    html += `${name}: +${(r.synergy * 100).toFixed(1)}% synergy<br>`;
+                });
+                html += '</div>';
+            }
+            
+            document.getElementById('pairResults').innerHTML = html;
+        }
+        
+        function displaySynergyMatrix(categoryNames, individualResults, pairResults) {
+            const shortNames = categoryNames.map(n => n.split(':')[0]);
+            
+            let html = '<div class="matrix" style="grid-template-columns: auto repeat(' + categoryNames.length + ', 1fr);">';
+            
+            // Header row
+            html += '<div class="matrix-cell"></div>';
+            shortNames.forEach(n => {
+                html += `<div class="matrix-cell" style="font-weight: bold;">${n}</div>`;
+            });
+            
+            // Data rows
+            for (let i = 0; i < categoryNames.length; i++) {
+                html += `<div class="matrix-cell" style="font-weight: bold;">${shortNames[i]}</div>`;
+                
+                for (let j = 0; j < categoryNames.length; j++) {
+                    if (i === j) {
+                        const acc = individualResults[categoryNames[i]].accuracy;
+                        html += `<div class="matrix-cell" style="background: rgba(100,100,100,0.3);">${(acc * 100).toFixed(0)}%</div>`;
+                    } else {
+                        const pairKey = i < j 
+                            ? `${categoryNames[i]} + ${categoryNames[j]}`
+                            : `${categoryNames[j]} + ${categoryNames[i]}`;
+                        const r = pairResults[pairKey];
+                        
+                        if (r) {
+                            const synergy = r.synergy;
+                            let bgColor;
+                            if (synergy > 0.02) bgColor = 'rgba(0, 255, 136, 0.4)';
+                            else if (synergy > 0) bgColor = 'rgba(0, 255, 136, 0.2)';
+                            else if (synergy > -0.02) bgColor = 'rgba(255, 200, 0, 0.2)';
+                            else bgColor = 'rgba(255, 68, 68, 0.3)';
+                            
+                            html += `<div class="matrix-cell" style="background: ${bgColor};">${(r.accuracy * 100).toFixed(0)}%</div>`;
+                        } else {
+                            html += `<div class="matrix-cell">-</div>`;
+                        }
+                    }
+                }
+            }
+            
+            html += '</div>';
+            html += '<p style="font-size: 0.8em; color: #888; margin-top: 10px;">Diagonal = individual accuracy. Off-diagonal = pair accuracy. Green = synergy, Red = redundant.</p>';
+            
+            document.getElementById('synergyMatrix').innerHTML = html;
+        }
+        
+        function displayTopCombos(individual, pairs, triples) {
+            const allResults = [
+                ...Object.entries(individual).map(([k, v]) => ({ name: k, ...v, type: 'single' })),
+                ...Object.entries(pairs).map(([k, v]) => ({ name: k, ...v, type: 'pair' })),
+                ...Object.entries(triples).map(([k, v]) => ({ name: k, ...v, type: 'triple' }))
+            ];
+            
+            const sorted = allResults.sort((a, b) => b.accuracy - a.accuracy);
+            const top5 = sorted.slice(0, 5);
+            
+            let html = '';
+            
+            top5.forEach((r, idx) => {
+                const isTop = idx === 0;
+                html += `<div class="combo-card ${isTop ? 'top' : ''}">`;
+                html += `<div>`;
+                html += `<strong>${idx + 1}. ${r.name}</strong>`;
+                html += `<span style="color: #888; margin-left: 10px;">(${r.type})</span>`;
+                html += `</div>`;
+                html += `<div class="${r.accuracy >= 0.9 ? 'best' : r.accuracy >= 0.85 ? 'good' : ''}" style="font-size: 1.3em;">`;
+                html += `${(r.accuracy * 100).toFixed(1)}%`;
+                html += `</div>`;
+                html += `</div>`;
+            });
+            
+            document.getElementById('topCombos').innerHTML = html;
+        }
+        
+        function displayOptimalConfig(individual, pairs, triples, bits) {
+            // Find absolute best
+            const allResults = [
+                ...Object.entries(individual).map(([k, v]) => ({ name: k, ...v, type: 'single', complexity: 1 })),
+                ...Object.entries(pairs).map(([k, v]) => ({ name: k, ...v, type: 'pair', complexity: 2 })),
+                ...Object.entries(triples).map(([k, v]) => ({ name: k, ...v, type: 'triple', complexity: 3 }))
+            ];
+            
+            const sorted = allResults.sort((a, b) => b.accuracy - a.accuracy);
+            const best = sorted[0];
+            
+            // Find best pair (sweet spot)
+            const bestPair = Object.entries(pairs).sort((a, b) => b[1].accuracy - a[1].accuracy)[0];
+            
+            // Find best individual
+            const bestIndividual = Object.entries(individual).sort((a, b) => b[1].accuracy - a[1].accuracy)[0];
+            
+            let html = '';
+            
+            html += `<div class="insight-box best">`;
+            html += `<h3 style="color: #ffff00;">🏆 OPTIMAL: ${best.name}</h3>`;
+            html += `<div style="font-size: 2em; margin: 15px 0;" class="best">${(best.accuracy * 100).toFixed(1)}%</div>`;
+            html += `<div>Type: ${best.type} | Perfect: ${best.perfectCount} | Bits: ${bits}</div>`;
+            html += `</div>`;
+            
+            // Comparison
+            html += '<h3>Comparison</h3>';
+            html += '<div class="stats-row">';
+            html += `<div class="stat-box"><div class="stat-value">${(bestIndividual[1].accuracy * 100).toFixed(1)}%</div><div class="stat-label">Best Single</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${(bestPair[1].accuracy * 100).toFixed(1)}%</div><div class="stat-label">Best Pair</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${(best.accuracy * 100).toFixed(1)}%</div><div class="stat-label">Best Overall</div></div>`;
+            html += '</div>';
+            
+            // Recommendation
+            const pairImprovement = bestPair[1].accuracy - bestIndividual[1].accuracy;
+            
+            html += '<h3>Recommendation</h3>';
+            html += '<div class="insight-box">';
+            
+            if (pairImprovement > 0.02) {
+                html += `<strong>Pair combination provides meaningful improvement (+${(pairImprovement * 100).toFixed(1)}%)</strong><br><br>`;
+                html += `<strong>Use:</strong> ${bestPair[0]}<br>`;
+                html += `This combines orthogonal signals effectively.`;
+            } else if (pairImprovement > 0) {
+                html += `<strong>Modest improvement from combination (+${(pairImprovement * 100).toFixed(1)}%)</strong><br><br>`;
+                html += `Best single category (${bestIndividual[0]}) captures most of the signal.<br>`;
+                html += `Pairs add marginal value.`;
+            } else {
+                html += `<strong>Single category is optimal</strong><br><br>`;
+                html += `${bestIndividual[0]} alone performs best.<br>`;
+                html += `Additional features add noise, not signal.`;
+            }
+            
+            html += '</div>';
+            
+            document.getElementById('optimalConfig').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

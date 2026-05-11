@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semiprime Construction Observatory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00ffaa;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #111;
+            border-radius: 8px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        input[type="number"], input[type="text"] {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 120px;
+            font-family: inherit;
+        }
+        
+        button {
+            background: #00aa77;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #00ffaa;
+        }
+        
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        
+        button.secondary:hover {
+            background: #666;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: #111;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #222;
+        }
+        
+        .panel h2 {
+            color: #00aaff;
+            font-size: 1em;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .multiplication-grid {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            background: #0a0a0f;
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 200px;
+        }
+        
+        .digit-highlight {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+        
+        .carry-highlight {
+            color: #ff5555;
+            font-weight: bold;
+        }
+        
+        .result-highlight {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #0a0a0f;
+            border-radius: 4px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .stat-box {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2em;
+            color: #00ffaa;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 3px;
+        }
+        
+        .timeline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .timeline input[type="range"] {
+            flex: 1;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        .timeline input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ffaa;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .step-info {
+            color: #888;
+            font-size: 0.9em;
+            min-width: 100px;
+        }
+        
+        .fft-peaks {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .peak {
+            display: inline-block;
+            margin: 3px;
+            padding: 3px 8px;
+            background: #00aaff33;
+            border-radius: 3px;
+            color: #00aaff;
+        }
+        
+        .recordings {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .recording-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #1a1a2e;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .recording-item:hover {
+            background: #252540;
+        }
+        
+        .compare-checkbox {
+            margin-right: 10px;
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 0.85em;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .pattern-alert {
+            background: #003322;
+            border: 1px solid #00aa66;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .pattern-alert h3 {
+            color: #00ffaa;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Semiprime Construction Observatory</h1>
+    <p class="subtitle">Watch multiplication happen. Record the dynamics. Find the signal.</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="text" id="primeP" value="101">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="text" id="primeQ" value="103">
+        </div>
+        <div class="control-group">
+            <label>Base</label>
+            <input type="number" id="base" value="10" min="2" max="16">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="startConstruction()">▶ Construct</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="generateRandomPrimes()">🎲 Random</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="generateBalancedPrimes()">⚖️ Balanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="generateUnbalancedPrimes()">📐 Unbalanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="recordCurrentConstruction()">💾 Record</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runBatchAnalysis()">🔬 Batch (20)</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runLargeBatch(100)">🔬 Large Batch (100)</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runScaleTest()">📏 Scale Test (10^8+)</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runLargeBatch(100)">🔬 Batch (100)</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runLargeBatch(500)">🔬 Batch (500)</button>
+        </div>
+    </div>
+    
+    <div class="timeline">
+        <span>Step:</span>
+        <input type="range" id="stepSlider" min="0" max="100" value="100" oninput="goToStep(this.value)">
+        <span class="step-info" id="stepInfo">Final</span>
+        <button class="secondary" onclick="playAnimation()">▶ Play</button>
+    </div>
+    
+    <div class="main-container">
+        <!-- Multiplication Grid Panel -->
+        <div class="panel">
+            <h2>📝 Multiplication Grid</h2>
+            <div class="multiplication-grid" id="multiplicationGrid">
+                Enter primes and click Construct...
+            </div>
+            <div class="stats" id="basicStats">
+                <div class="stat-box">
+                    <div class="stat-value" id="statN">-</div>
+                    <div class="stat-label">N = p × q</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statSum">-</div>
+                    <div class="stat-label">p + q</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statRatio">-</div>
+                    <div class="stat-label">(p+q) / 2√N</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statFermat">-</div>
+                    <div class="stat-label">p - q</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Carry Wave Panel -->
+        <div class="panel">
+            <h2>🌊 Carry Wave</h2>
+            <canvas id="carryWaveCanvas"></canvas>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="statTotalCarry">-</div>
+                    <div class="stat-label">Total Carry Sum</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statMaxCarry">-</div>
+                    <div class="stat-label">Max Carry</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statCarryRatio">-</div>
+                    <div class="stat-label">CarrySum / (p+q)</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FFT of Carry Sequence -->
+        <div class="panel">
+            <h2>📊 FFT of Carry Sequence</h2>
+            <canvas id="carryFFTCanvas"></canvas>
+            <div class="fft-peaks">
+                <strong>Dominant Frequencies:</strong>
+                <div id="carryFFTPeaks">-</div>
+            </div>
+        </div>
+        
+        <!-- FFT of N's Digits -->
+        <div class="panel">
+            <h2>📊 FFT of N's Digits</h2>
+            <canvas id="nDigitsFFTCanvas"></canvas>
+            <div class="fft-peaks">
+                <strong>Dominant Frequencies:</strong>
+                <div id="nDigitsFFTPeaks">-</div>
+            </div>
+        </div>
+        
+        <!-- Fermat Distance Evolution -->
+        <div class="panel">
+            <h2>📈 Fermat Distance Evolution</h2>
+            <canvas id="fermatCanvas"></canvas>
+            <p class="info-text">Shows √(S² - 4N) as construction proceeds. Final value = |p - q|.</p>
+        </div>
+        
+        <!-- Column Sum Heatmap -->
+        <div class="panel">
+            <h2>🔥 Column Sum Accumulation</h2>
+            <canvas id="columnHeatmap"></canvas>
+            <p class="info-text">Heatmap showing column sums building up. X = digit position, Y = time step.</p>
+        </div>
+        
+        <!-- Spectral Comparison -->
+        <div class="panel">
+            <h2>🔍 Spectral Correlation</h2>
+            <canvas id="correlationCanvas"></canvas>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="statCorrelation">-</div>
+                    <div class="stat-label">FFT Correlation</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statPeakMatch">-</div>
+                    <div class="stat-label">Peak Match %</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Golden Spiral Projection Panel (Grok Suggestion 2) -->
+        <div class="panel">
+            <h2>🌀 Golden Spiral Projection</h2>
+            <canvas id="spiralCanvas"></canvas>
+            <p class="info-text">Carry sequences mapped to golden spiral. Color = balance ratio. Look for clustering.</p>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="statCarryCentroid">-</div>
+                    <div class="stat-label">Carry Centroid</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statCarrySpread">-</div>
+                    <div class="stat-label">Carry Spread</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recordings Panel -->
+        <div class="panel">
+            <h2>💾 Recorded Constructions</h2>
+            <div class="recordings" id="recordingsList">
+                <p class="info-text">Record multiple constructions to compare patterns across different semiprimes.</p>
+            </div>
+            <button class="secondary" onclick="analyzeRecordings()" style="margin-top: 10px; width: 100%;">📊 Analyze Patterns</button>
+        </div>
+        
+        <!-- Pattern Analysis Panel -->
+        <div class="panel full-width" id="patternPanel" style="display: none;">
+            <h2>🧬 Pattern Analysis</h2>
+            <div id="patternAnalysis"></div>
+        </div>
+        
+        <!-- Carry Prediction Panel -->
+        <div class="panel full-width">
+            <h2>🔮 Carry Prediction from N Alone</h2>
+            <p class="info-text">Can we predict construction dynamics from just the final product?</p>
+            <div class="controls" style="background: transparent; padding: 10px 0;">
+                <div class="control-group">
+                    <label>Enter N (semiprime)</label>
+                    <input type="text" id="predictN" value="27221" style="width: 200px;">
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button onclick="predictFromN()">🔮 Predict Carries</button>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button class="secondary" onclick="buildPredictionModel()">🧠 Train Model (use recordings)</button>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button class="secondary" onclick="testPredictionBlind()">🎯 Blind Test</button>
+                </div>
+            </div>
+            <div id="predictionResults" style="margin-top: 15px;"></div>
+        </div>
+        
+        <!-- Reverse Engineering Panel -->
+        <div class="panel full-width">
+            <h2>🔬 Reverse Engineer: What Can N Tell Us?</h2>
+            <div id="reverseAnalysis">
+                <p class="info-text">Enter a semiprime above and click "Predict Carries" to analyze what N reveals about its construction.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let currentConstruction = null;
+        let recordings = [];
+        let animationFrame = null;
+        let isPlaying = false;
+        
+        // Primes for testing
+        const primes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069, 1087, 1091, 1093, 1097
+        ];
+        
+        // Larger primes for scale testing (Grok suggestion: test N ~ 10^8 - 10^10)
+        const largePrimes = [
+            10007, 10009, 10037, 10039, 10061, 10067, 10069, 10079, 10091, 10093,
+            10099, 10103, 10111, 10133, 10139, 10141, 10151, 10159, 10163, 10169,
+            10177, 10181, 10193, 10211, 10223, 10243, 10247, 10253, 10259, 10267,
+            10271, 10273, 10289, 10301, 10303, 10313, 10321, 10331, 10333, 10337,
+            20011, 20021, 20023, 20029, 20047, 20051, 20063, 20071, 20089, 20101,
+            30011, 30013, 30029, 30047, 30059, 30071, 30089, 30091, 30097, 30103,
+            40009, 40013, 40031, 40037, 40039, 40063, 40087, 40093, 40099, 40111,
+            50021, 50023, 50033, 50047, 50051, 50053, 50069, 50077, 50087, 50093,
+            60013, 60017, 60029, 60037, 60041, 60077, 60083, 60089, 60091, 60101,
+            70001, 70003, 70009, 70019, 70039, 70051, 70061, 70067, 70079, 70099,
+            80021, 80039, 80051, 80071, 80077, 80107, 80111, 80141, 80147, 80149,
+            90001, 90007, 90011, 90017, 90019, 90023, 90031, 90053, 90059, 90067,
+            99991, 99989, 99971, 99961, 99929, 99923, 99907, 99901, 99881, 99877
+        ];
+        
+        function generateRandomPrimes() {
+            const idx1 = Math.floor(Math.random() * primes.length);
+            const idx2 = Math.floor(Math.random() * primes.length);
+            document.getElementById('primeP').value = primes[idx1];
+            document.getElementById('primeQ').value = primes[idx2];
+        }
+        
+        function generateBalancedPrimes() {
+            // Pick two primes that are close together
+            const idx = Math.floor(Math.random() * (primes.length - 5)) + 2;
+            const offset = Math.floor(Math.random() * 3) + 1;
+            document.getElementById('primeP').value = primes[idx];
+            document.getElementById('primeQ').value = primes[idx + offset];
+        }
+        
+        function generateUnbalancedPrimes() {
+            // Pick primes with large ratio difference
+            const small = primes[Math.floor(Math.random() * 20)]; // small prime
+            const large = primes[primes.length - 1 - Math.floor(Math.random() * 20)]; // large prime
+            document.getElementById('primeP').value = small;
+            document.getElementById('primeQ').value = large;
+        }
+        
+        function toDigits(n, base) {
+            if (n === 0n) return [0];
+            const digits = [];
+            while (n > 0n) {
+                digits.push(Number(n % BigInt(base)));
+                n = n / BigInt(base);
+            }
+            return digits; // least significant first
+        }
+        
+        function performMultiplication(p, q, base) {
+            const pBig = BigInt(p);
+            const qBig = BigInt(q);
+            const N = pBig * qBig;
+            
+            const pDigits = toDigits(pBig, base);
+            const qDigits = toDigits(qBig, base);
+            const nDigits = toDigits(N, base);
+            
+            const steps = [];
+            const partialProducts = [];
+            
+            // Grid dimensions
+            const gridWidth = pDigits.length + qDigits.length;
+            
+            // Compute partial products row by row
+            for (let j = 0; j < qDigits.length; j++) {
+                const row = new Array(gridWidth).fill(0);
+                let carry = 0;
+                for (let i = 0; i < pDigits.length; i++) {
+                    const product = pDigits[i] * qDigits[j] + carry;
+                    row[i + j] = product % base;
+                    carry = Math.floor(product / base);
+                }
+                if (carry > 0) {
+                    row[pDigits.length + j] = carry;
+                }
+                partialProducts.push([...row]);
+                
+                steps.push({
+                    type: 'partial',
+                    qDigitIndex: j,
+                    row: [...row],
+                    description: `Multiply p by q[${j}]=${qDigits[j]}`
+                });
+            }
+            
+            // Sum columns with carry propagation - THIS IS THE KEY DATA
+            const columnCarries = []; // Carries DURING column summation
+            const columnSumsRaw = []; // Raw sums before mod
+            const finalDigits = new Array(gridWidth).fill(0);
+            let carry = 0;
+            
+            for (let col = 0; col < gridWidth; col++) {
+                let colSum = carry;
+                for (let row = 0; row < partialProducts.length; row++) {
+                    colSum += partialProducts[row][col];
+                }
+                columnSumsRaw.push(colSum);
+                finalDigits[col] = colSum % base;
+                carry = Math.floor(colSum / base);
+                columnCarries.push(carry);
+                
+                steps.push({
+                    type: 'column',
+                    column: col,
+                    sum: colSum,
+                    result: colSum % base,
+                    carryOut: carry
+                });
+            }
+            
+            // Trim leading zeros
+            while (finalDigits.length > 1 && finalDigits[finalDigits.length - 1] === 0) {
+                finalDigits.pop();
+            }
+            
+            // Compute FFTs
+            const carryFFT = computeFFT(columnCarries);
+            const nDigitsFFT = computeFFT(nDigits);
+            const columnSumsFFT = computeFFT(columnSumsRaw);
+            
+            // Find peaks
+            const carryPeaks = findPeaks(carryFFT, 5);
+            const nDigitsPeaks = findPeaks(nDigitsFFT, 5);
+            
+            // Compute correlations
+            const correlation = computeCorrelation(carryFFT, nDigitsFFT);
+            
+            // Fermat distances during construction
+            const fermatDistances = [];
+            for (let i = 1; i <= Math.max(pDigits.length, qDigits.length); i++) {
+                const partialPDigits = pDigits.slice(0, i);
+                const partialQDigits = qDigits.slice(0, i);
+                const partialP = fromDigits(partialPDigits, base);
+                const partialQ = fromDigits(partialQDigits, base);
+                const partialN = partialP * partialQ;
+                const S = partialP + partialQ;
+                const fermatDist = S * S - 4n * partialN;
+                
+                fermatDistances.push({
+                    step: i,
+                    partialP: Number(partialP),
+                    partialQ: Number(partialQ),
+                    S: Number(S),
+                    fermatDist: Number(fermatDist),
+                    sqrtFermat: Math.sqrt(Math.max(0, Number(fermatDist)))
+                });
+            }
+            
+            const sum = Number(pBig + qBig);
+            const diff = Math.abs(Number(qBig - pBig));
+            const totalCarry = columnCarries.reduce((a, b) => a + b, 0);
+            
+            // === GROK SUGGESTION 1: Carry position analysis ===
+            const numCarryPositions = columnCarries.length;
+            const midpoint = Math.floor(numCarryPositions / 2);
+            const edgeZone = Math.floor(numCarryPositions / 4);
+            
+            // Edge carries (first and last quarter)
+            const leftEdgeCarries = columnCarries.slice(0, edgeZone).reduce((a, b) => a + b, 0);
+            const rightEdgeCarries = columnCarries.slice(-edgeZone).reduce((a, b) => a + b, 0);
+            const edgeCarries = leftEdgeCarries + rightEdgeCarries;
+            
+            // Middle carries (middle half)
+            const middleCarries = columnCarries.slice(edgeZone, -edgeZone || numCarryPositions).reduce((a, b) => a + b, 0);
+            
+            // Carry concentration: where do carries happen?
+            const carryPositionWeighted = columnCarries.reduce((sum, c, i) => sum + c * i, 0);
+            const carryCentroid = totalCarry > 0 ? carryPositionWeighted / totalCarry : midpoint;
+            const carryCentroidNormalized = carryCentroid / (numCarryPositions || 1);
+            
+            // Max carry and its position
+            const maxCarry = Math.max(...columnCarries);
+            const maxCarryPosition = columnCarries.indexOf(maxCarry);
+            const maxCarryPositionNormalized = maxCarryPosition / (numCarryPositions || 1);
+            
+            // Carry spread (how distributed are carries?)
+            const nonZeroCarryPositions = columnCarries.filter(c => c > 0).length;
+            const carrySpread = nonZeroCarryPositions / (numCarryPositions || 1);
+            
+            // Edge vs middle ratio
+            const edgeToMiddleRatio = middleCarries > 0 ? edgeCarries / middleCarries : (edgeCarries > 0 ? Infinity : 0);
+            
+            return {
+                p: Number(pBig),
+                q: Number(qBig),
+                N: Number(N),
+                base,
+                pDigits,
+                qDigits,
+                nDigits,
+                partialProducts,
+                steps,
+                carries: columnCarries,
+                columnSumsRaw,
+                carryFFT,
+                nDigitsFFT,
+                columnSumsFFT,
+                carryPeaks,
+                nDigitsPeaks,
+                correlation,
+                fermatDistances,
+                sum,
+                diff,
+                ratio: sum / (2 * Math.sqrt(Number(N))),
+                totalCarry,
+                carryToSumRatio: totalCarry / sum,
+                maxCarry,
+                // Grok's carry position features
+                edgeCarries,
+                middleCarries,
+                carryCentroidNormalized,
+                maxCarryPositionNormalized,
+                carrySpread,
+                edgeToMiddleRatio: isFinite(edgeToMiddleRatio) ? edgeToMiddleRatio : 0
+            };
+        }
+        
+        function fromDigits(digits, base) {
+            let n = 0n;
+            for (let i = digits.length - 1; i >= 0; i--) {
+                n = n * BigInt(base) + BigInt(digits[i]);
+            }
+            return n;
+        }
+        
+        function computeFFT(data) {
+            if (!data || data.length === 0) return [];
+            
+            // Pad to power of 2
+            const n = Math.pow(2, Math.ceil(Math.log2(Math.max(data.length, 2))));
+            const padded = [...data];
+            while (padded.length < n) padded.push(0);
+            
+            // DFT
+            const result = [];
+            for (let k = 0; k < n / 2; k++) {
+                let real = 0, imag = 0;
+                for (let t = 0; t < n; t++) {
+                    const angle = -2 * Math.PI * k * t / n;
+                    real += padded[t] * Math.cos(angle);
+                    imag += padded[t] * Math.sin(angle);
+                }
+                result.push(Math.sqrt(real * real + imag * imag) / n);
+            }
+            return result;
+        }
+        
+        function findPeaks(fft, count) {
+            if (!fft || fft.length === 0) return [];
+            const indexed = fft.map((v, i) => ({ freq: i, magnitude: v }));
+            indexed.sort((a, b) => b.magnitude - a.magnitude);
+            return indexed.slice(0, count).filter(p => p.magnitude > 0.001);
+        }
+        
+        function computeCorrelation(a, b) {
+            if (!a || !b || a.length === 0 || b.length === 0) return 0;
+            
+            const minLen = Math.min(a.length, b.length);
+            let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
+            
+            for (let i = 0; i < minLen; i++) {
+                sumA += a[i];
+                sumB += b[i];
+                sumAB += a[i] * b[i];
+                sumA2 += a[i] * a[i];
+                sumB2 += b[i] * b[i];
+            }
+            
+            const n = minLen;
+            const numerator = n * sumAB - sumA * sumB;
+            const denominator = Math.sqrt((n * sumA2 - sumA * sumA) * (n * sumB2 - sumB * sumB));
+            
+            return denominator === 0 ? 0 : numerator / denominator;
+        }
+        
+        function startConstruction() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const base = parseInt(document.getElementById('base').value);
+            
+            if (isNaN(p) || isNaN(q) || p < 2 || q < 2) {
+                alert('Please enter valid primes');
+                return;
+            }
+            
+            currentConstruction = performMultiplication(p, q, base);
+            
+            const slider = document.getElementById('stepSlider');
+            slider.max = currentConstruction.steps.length;
+            slider.value = currentConstruction.steps.length;
+            
+            renderAll();
+        }
+        
+        function renderAll(step = null) {
+            if (!currentConstruction) return;
+            
+            const c = currentConstruction;
+            const maxStep = step !== null ? step : c.steps.length;
+            
+            document.getElementById('stepInfo').textContent = 
+                maxStep >= c.steps.length ? 'Final' : `${maxStep}/${c.steps.length}`;
+            
+            renderMultiplicationGrid(c, maxStep);
+            
+            // Stats
+            document.getElementById('statN').textContent = c.N.toLocaleString();
+            document.getElementById('statSum').textContent = c.sum.toLocaleString();
+            document.getElementById('statRatio').textContent = c.ratio.toFixed(6);
+            document.getElementById('statFermat').textContent = c.diff.toLocaleString();
+            
+            document.getElementById('statTotalCarry').textContent = c.totalCarry;
+            document.getElementById('statMaxCarry').textContent = c.maxCarry;
+            document.getElementById('statCarryRatio').textContent = c.carryToSumRatio.toFixed(4);
+            
+            document.getElementById('statCorrelation').textContent = c.correlation.toFixed(4);
+            
+            const peakMatch = computePeakMatch(c.carryPeaks, c.nDigitsPeaks);
+            document.getElementById('statPeakMatch').textContent = peakMatch.toFixed(1) + '%';
+            
+            // Render visualizations
+            renderCarryWave(c);
+            renderFFT('carryFFTCanvas', c.carryFFT, '#ff5555');
+            renderFFT('nDigitsFFTCanvas', c.nDigitsFFT, '#55ff55');
+            renderPeaks('carryFFTPeaks', c.carryPeaks);
+            renderPeaks('nDigitsFFTPeaks', c.nDigitsPeaks);
+            renderFermatEvolution(c);
+            renderColumnHeatmap(c);
+            renderCorrelationPlot(c);
+            renderGoldenSpiral(c);
+        }
+        
+        function renderMultiplicationGrid(c, maxStep) {
+            const grid = document.getElementById('multiplicationGrid');
+            
+            const pStr = c.pDigits.slice().reverse().join('');
+            const qStr = c.qDigits.slice().reverse().join('');
+            const nStr = c.nDigits.slice().reverse().join('');
+            
+            const width = Math.max(pStr.length, qStr.length, nStr.length) + 4;
+            
+            let html = '';
+            html += `<span class="digit-highlight">${pStr.padStart(width)}</span>  (p = ${c.p})\n`;
+            html += `<span class="digit-highlight">× ${qStr.padStart(width - 2)}</span>  (q = ${c.q})\n`;
+            html += '─'.repeat(width + 20) + '\n';
+            
+            c.partialProducts.forEach((row, idx) => {
+                const rowStr = row.slice().reverse().join('').replace(/^0+/, '') || '0';
+                const padding = ' '.repeat(c.partialProducts.length - 1 - idx);
+                html += `${rowStr.padStart(width)}${padding}  (p × ${c.qDigits[idx]})\n`;
+            });
+            
+            html += '─'.repeat(width + 20) + '\n';
+            html += `<span class="result-highlight">${nStr.padStart(width)}</span>  (N = ${c.N.toLocaleString()})\n`;
+            
+            html += `\n<span class="carry-highlight">Column carries: [${c.carries.join(', ')}]</span>\n`;
+            html += `<span style="color:#888">Column sums:    [${c.columnSumsRaw.join(', ')}]</span>\n`;
+            
+            html += `\n═══════════════════════════════════\n`;
+            html += `p + q = ${c.sum}\n`;
+            html += `p - q = ${c.diff}\n`;
+            html += `(p+q) / 2√N = ${c.ratio.toFixed(6)}\n`;
+            html += `Total carry sum = ${c.totalCarry}\n`;
+            html += `Carry/Sum ratio = ${c.carryToSumRatio.toFixed(6)}\n`;
+            
+            grid.innerHTML = html;
+        }
+        
+        function renderCarryWave(c) {
+            const canvas = document.getElementById('carryWaveCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            if (c.carries.length === 0) return;
+            
+            const maxCarry = Math.max(...c.carries, 1);
+            const barWidth = Math.max(4, (w - 40) / c.carries.length);
+            
+            // Draw bars
+            c.carries.forEach((carry, i) => {
+                const barHeight = (carry / maxCarry) * (h - 40);
+                const x = 20 + i * barWidth;
+                const y = h - barHeight - 20;
+                
+                const intensity = carry / maxCarry;
+                ctx.fillStyle = `hsl(${(1 - intensity) * 60}, 80%, ${40 + intensity * 30}%)`;
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+            });
+            
+            // Axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.fillText('Position →', w / 2 - 30, h - 5);
+            ctx.fillText('0', 20, h - 5);
+            ctx.fillText(String(c.carries.length - 1), w - 30, h - 5);
+        }
+        
+        function renderFFT(canvasId, fftData, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            if (!fftData || fftData.length === 0) return;
+            
+            const maxMag = Math.max(...fftData, 0.001);
+            const barWidth = Math.max(3, (w - 40) / fftData.length);
+            
+            fftData.forEach((mag, i) => {
+                const barHeight = (mag / maxMag) * (h - 40);
+                const x = 20 + i * barWidth;
+                const y = h - barHeight - 20;
+                
+                ctx.globalAlpha = 0.3 + 0.7 * (mag / maxMag);
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, barWidth - 1, barHeight);
+            });
+            
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.fillText('Frequency →', w / 2 - 30, h - 5);
+        }
+        
+        function renderPeaks(elementId, peaks) {
+            const el = document.getElementById(elementId);
+            if (!peaks || peaks.length === 0) {
+                el.innerHTML = '<span style="color: #666;">No significant peaks</span>';
+                return;
+            }
+            
+            el.innerHTML = peaks.map(p => 
+                `<span class="peak">f=${p.freq} (${p.magnitude.toFixed(3)})</span>`
+            ).join(' ');
+        }
+        
+        function computePeakMatch(peaks1, peaks2) {
+            if (!peaks1.length || !peaks2.length) return 0;
+            
+            const freqs1 = new Set(peaks1.map(p => p.freq));
+            const freqs2 = peaks2.map(p => p.freq);
+            
+            let matches = 0;
+            freqs2.forEach(f => {
+                if (freqs1.has(f) || freqs1.has(f - 1) || freqs1.has(f + 1)) {
+                    matches++;
+                }
+            });
+            
+            return (matches / Math.max(freqs1.size, freqs2.length)) * 100;
+        }
+        
+        function renderFermatEvolution(c) {
+            const canvas = document.getElementById('fermatCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            const data = c.fermatDistances;
+            if (!data || data.length === 0) return;
+            
+            const maxDist = Math.max(...data.map(d => d.sqrtFermat), 1);
+            
+            // Draw line
+            ctx.strokeStyle = '#00ffaa';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            data.forEach((d, i) => {
+                const x = 30 + (i / Math.max(data.length - 1, 1)) * (w - 60);
+                const y = h - 30 - (d.sqrtFermat / maxDist) * (h - 60);
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            
+            ctx.stroke();
+            
+            // Final marker
+            const finalD = data[data.length - 1];
+            ctx.fillStyle = '#00ffaa';
+            ctx.beginPath();
+            ctx.arc(w - 30, h - 30 - (finalD.sqrtFermat / maxDist) * (h - 60), 6, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#888';
+            ctx.font = '10px monospace';
+            ctx.fillText(`Final: |p-q| = ${c.diff}`, 10, 15);
+        }
+        
+        function renderColumnHeatmap(c) {
+            const canvas = document.getElementById('columnHeatmap');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            const numCols = c.partialProducts[0]?.length || 0;
+            const numRows = c.partialProducts.length;
+            
+            if (numCols === 0 || numRows === 0) return;
+            
+            // Build cumulative sums
+            const matrix = [];
+            const cumulative = new Array(numCols).fill(0);
+            
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < numCols; col++) {
+                    cumulative[col] += c.partialProducts[row][col];
+                }
+                matrix.push([...cumulative]);
+            }
+            
+            const maxVal = Math.max(...matrix.flat(), 1);
+            
+            const cellWidth = (w - 40) / numCols;
+            const cellHeight = (h - 40) / numRows;
+            
+            matrix.forEach((row, y) => {
+                row.forEach((val, x) => {
+                    const intensity = val / maxVal;
+                    ctx.fillStyle = `hsl(${30 - intensity * 30}, 90%, ${20 + intensity * 40}%)`;
+                    ctx.fillRect(20 + x * cellWidth, 20 + y * cellHeight, cellWidth - 1, cellHeight - 1);
+                });
+            });
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.fillText('Column →', w / 2 - 20, h - 5);
+            ctx.fillText('Step ↓', 5, 15);
+        }
+        
+        function renderCorrelationPlot(c) {
+            const canvas = document.getElementById('correlationCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            const carryFFT = c.carryFFT;
+            const nFFT = c.nDigitsFFT;
+            
+            if (!carryFFT.length || !nFFT.length) return;
+            
+            const minLen = Math.min(carryFFT.length, nFFT.length);
+            const maxCarry = Math.max(...carryFFT, 0.001);
+            const maxN = Math.max(...nFFT, 0.001);
+            
+            // Scatter plot
+            ctx.fillStyle = '#00aaff';
+            for (let i = 0; i < minLen; i++) {
+                const x = 30 + (carryFFT[i] / maxCarry) * (w - 60);
+                const y = h - 30 - (nFFT[i] / maxN) * (h - 60);
+                
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            ctx.globalAlpha = 1;
+            
+            // Diagonal reference
+            ctx.strokeStyle = '#ffffff22';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(30, h - 30);
+            ctx.lineTo(w - 30, 30);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.fillText('Carry FFT →', w / 2 - 30, h - 5);
+        }
+        
+        // === GROK SUGGESTION 2: Golden Spiral Projection ===
+        function renderGoldenSpiral(c) {
+            const canvas = document.getElementById('spiralCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const maxRadius = Math.min(w, h) / 2 - 20;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            const carries = c.carries;
+            if (!carries || carries.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '12px monospace';
+                ctx.fillText('No carry data', centerX - 40, centerY);
+                return;
+            }
+            
+            const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
+            
+            // Map each carry position to spiral
+            const maxCarry = Math.max(...carries, 1);
+            
+            carries.forEach((carry, i) => {
+                const angle = i * goldenAngle;
+                const radius = maxRadius * Math.sqrt((i + 1) / carries.length);
+                
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                
+                // Size based on carry value
+                const size = 3 + (carry / maxCarry) * 8;
+                
+                // Color based on position (edge vs middle)
+                const positionRatio = i / carries.length;
+                const isMiddle = positionRatio > 0.25 && positionRatio < 0.75;
+                
+                if (carry > 0) {
+                    // Carries: color by intensity
+                    const hue = isMiddle ? 120 : 30; // Green for middle, orange for edge
+                    const lightness = 40 + (carry / maxCarry) * 30;
+                    ctx.fillStyle = `hsl(${hue}, 80%, ${lightness}%)`;
+                } else {
+                    // Zero carries: dim gray
+                    ctx.fillStyle = '#333';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Position label for first few
+                if (i < 3 || i === carries.length - 1) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '8px monospace';
+                    ctx.fillText(i.toString(), x + size + 2, y + 3);
+                }
+            });
+            
+            // Draw spiral guide
+            ctx.strokeStyle = '#ffffff11';
+            ctx.beginPath();
+            for (let i = 0; i < 100; i++) {
+                const angle = i * goldenAngle;
+                const radius = maxRadius * Math.sqrt(i / 100);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Legend
+            ctx.fillStyle = '#666';
+            ctx.font = '9px monospace';
+            ctx.fillText('🟢 Middle carries', 5, 15);
+            ctx.fillText('🟠 Edge carries', 5, 28);
+            
+            // Update stats
+            if (c.carryCentroidNormalized !== undefined) {
+                document.getElementById('statCarryCentroid').textContent = c.carryCentroidNormalized.toFixed(3);
+            }
+            if (c.carrySpread !== undefined) {
+                document.getElementById('statCarrySpread').textContent = c.carrySpread.toFixed(3);
+            }
+        }
+        
+        // Render spiral for all recordings (comparison view)
+        function renderRecordingsSpiral() {
+            const canvas = document.getElementById('spiralCanvas');
+            if (!canvas || recordings.length === 0) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const maxRadius = Math.min(w, h) / 2 - 20;
+            
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+            
+            const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+            
+            // Plot each recording's carry centroid on spiral
+            recordings.forEach((r, i) => {
+                const angle = i * goldenAngle;
+                const radius = maxRadius * Math.sqrt((i + 1) / recordings.length);
+                
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                
+                // Color by balance ratio
+                const ratio = r.ratio;
+                const hue = ratio < 1.1 ? 120 : ratio < 1.5 ? 60 : ratio < 2 ? 30 : 0;
+                const size = 4 + r.totalCarry * 2;
+                
+                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.min(size, 12), 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // Legend
+            ctx.fillStyle = '#666';
+            ctx.font = '9px monospace';
+            ctx.fillText('🟢 Balanced (ratio<1.1)', 5, 15);
+            ctx.fillText('🟡 Moderate (1.1-1.5)', 5, 28);
+            ctx.fillText('🔴 Unbalanced (>2)', 5, 41);
+        }
+        
+        function goToStep(step) {
+            renderAll(parseInt(step));
+        }
+        
+        function playAnimation() {
+            if (isPlaying) {
+                isPlaying = false;
+                return;
+            }
+            
+            if (!currentConstruction) return;
+            
+            isPlaying = true;
+            const slider = document.getElementById('stepSlider');
+            slider.value = 0;
+            
+            function animate() {
+                if (!isPlaying) return;
+                
+                let step = parseInt(slider.value);
+                if (step < currentConstruction.steps.length) {
+                    step++;
+                    slider.value = step;
+                    renderAll(step);
+                    animationFrame = setTimeout(animate, 150);
+                } else {
+                    isPlaying = false;
+                }
+            }
+            
+            animate();
+        }
+        
+        function recordCurrentConstruction() {
+            if (!currentConstruction) {
+                alert('No construction to record. Click Construct first.');
+                return;
+            }
+            
+            recordings.push({...currentConstruction, id: Date.now()});
+            updateRecordingsList();
+        }
+        
+        function updateRecordingsList() {
+            const list = document.getElementById('recordingsList');
+            
+            if (recordings.length === 0) {
+                list.innerHTML = '<p class="info-text">Record constructions to analyze patterns.</p>';
+                return;
+            }
+            
+            list.innerHTML = recordings.map((r, i) => `
+                <div class="recording-item">
+                    <span><strong>${r.p} × ${r.q}</strong></span>
+                    <span style="color:#888">ratio: ${r.ratio.toFixed(3)}, corr: ${r.correlation.toFixed(3)}</span>
+                </div>
+            `).join('');
+        }
+        
+        function runBatchAnalysis() {
+            runLargeBatch(20);
+        }
+        
+        // === GROK SUGGESTION 3: Scale Test with larger primes ===
+        function runScaleTest() {
+            recordings = [];
+            
+            const statusDiv = document.getElementById('recordingsList');
+            statusDiv.innerHTML = `<p style="color: #ffaa00;">⏳ Running scale test with N ~ 10^8 - 10^10...</p>`;
+            
+            setTimeout(() => {
+                // Test with larger primes (10,000 - 100,000 range)
+                // This produces N in range 10^8 to 10^10
+                
+                // Balanced large primes
+                for (let i = 0; i < 15; i++) {
+                    const idx = Math.floor(Math.random() * (largePrimes.length - 5));
+                    const p = largePrimes[idx];
+                    const q = largePrimes[idx + Math.floor(Math.random() * 3) + 1];
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + i, category: 'large-balanced', scale: 'large'});
+                }
+                
+                // Moderately unbalanced large
+                for (let i = 0; i < 15; i++) {
+                    const idx1 = Math.floor(Math.random() * 30);
+                    const idx2 = Math.floor(Math.random() * 30) + largePrimes.length - 40;
+                    const p = largePrimes[idx1];
+                    const q = largePrimes[Math.min(idx2, largePrimes.length - 1)];
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + 15 + i, category: 'large-moderate', scale: 'large'});
+                }
+                
+                // Very unbalanced: small prime × large prime
+                for (let i = 0; i < 10; i++) {
+                    const p = primes[Math.floor(Math.random() * 30)]; // small prime < 200
+                    const q = largePrimes[Math.floor(Math.random() * largePrimes.length)]; // large prime > 10000
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + 30 + i, category: 'scale-unbalanced', scale: 'mixed'});
+                }
+                
+                // Compare with small primes for reference
+                for (let i = 0; i < 10; i++) {
+                    const idx = Math.floor(Math.random() * (primes.length - 5)) + 5;
+                    const p = primes[idx];
+                    const q = primes[idx + Math.floor(Math.random() * 3) + 1];
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + 40 + i, category: 'small-balanced', scale: 'small'});
+                }
+                
+                updateRecordingsList();
+                runScaleAnalysis();
+            }, 50);
+        }
+        
+        function runScaleAnalysis() {
+            const panel = document.getElementById('patternPanel');
+            const analysis = document.getElementById('patternAnalysis');
+            panel.style.display = 'block';
+            
+            let html = '<div class="pattern-alert">';
+            html += '<h3>📏 Scale Test Results: Does Signal Hold for Large N?</h3>';
+            
+            // Group by scale
+            const smallRecs = recordings.filter(r => r.scale === 'small');
+            const largeRecs = recordings.filter(r => r.scale === 'large');
+            const mixedRecs = recordings.filter(r => r.scale === 'mixed');
+            
+            html += '<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">';
+            html += '<tr style="border-bottom: 1px solid #444;">';
+            html += '<th style="padding: 8px;">Scale</th>';
+            html += '<th>Count</th>';
+            html += '<th>N Range</th>';
+            html += '<th>Avg Carry/Sum</th>';
+            html += '<th>Avg Ratio</th>';
+            html += '<th>Avg FFT Corr</th>';
+            html += '</tr>';
+            
+            const groups = [
+                { name: 'Small (N < 10^6)', data: smallRecs },
+                { name: 'Large (N ~ 10^8-10^10)', data: largeRecs },
+                { name: 'Mixed (small × large)', data: mixedRecs }
+            ];
+            
+            groups.forEach(g => {
+                if (g.data.length === 0) return;
+                
+                const avgCarryRatio = g.data.reduce((s, r) => s + r.carryToSumRatio, 0) / g.data.length;
+                const avgRatio = g.data.reduce((s, r) => s + r.ratio, 0) / g.data.length;
+                const avgFFT = g.data.reduce((s, r) => s + r.correlation, 0) / g.data.length;
+                const minN = Math.min(...g.data.map(r => r.N));
+                const maxN = Math.max(...g.data.map(r => r.N));
+                
+                html += `<tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 8px;">${g.name}</td>
+                    <td>${g.data.length}</td>
+                    <td style="color: #888;">${minN.toExponential(2)} - ${maxN.toExponential(2)}</td>
+                    <td style="color: #00ffaa;">${avgCarryRatio.toFixed(6)}</td>
+                    <td style="color: #ffaa00;">${avgRatio.toFixed(3)}</td>
+                    <td style="color: #00aaff;">${avgFFT.toFixed(3)}</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            
+            // Compare the 0.003 constant across scales
+            html += '<div style="background: #002244; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>📐 Does the ~0.003 Constant Hold at Scale?</h4>';
+            
+            const smallCarryRatio = smallRecs.length > 0 ? 
+                smallRecs.filter(r => r.totalCarry > 0).reduce((s, r) => s + r.carryToSumRatio, 0) / smallRecs.filter(r => r.totalCarry > 0).length : 0;
+            const largeCarryRatio = largeRecs.length > 0 ?
+                largeRecs.filter(r => r.totalCarry > 0).reduce((s, r) => s + r.carryToSumRatio, 0) / largeRecs.filter(r => r.totalCarry > 0).length : 0;
+            
+            html += `<p>Small primes avg carry/sum: <span style="color: #00ffaa;">${smallCarryRatio.toFixed(6)}</span></p>`;
+            html += `<p>Large primes avg carry/sum: <span style="color: #00ffaa;">${largeCarryRatio.toFixed(6)}</span></p>`;
+            
+            if (smallCarryRatio > 0 && largeCarryRatio > 0) {
+                const ratio = largeCarryRatio / smallCarryRatio;
+                if (ratio > 0.5 && ratio < 2.0) {
+                    html += `<p style="color: #00ff88; font-weight: bold;">✓ Constant appears SCALE-INVARIANT (ratio: ${ratio.toFixed(3)})</p>`;
+                } else {
+                    html += `<p style="color: #ff8800;">⚠ Constant varies with scale (ratio: ${ratio.toFixed(3)})</p>`;
+                }
+            }
+            
+            html += '</div>';
+            
+            // Carry position analysis across scales
+            html += '<div style="background: #220044; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>📍 Carry Position Analysis (Grok Feature)</h4>';
+            
+            const withCarries = recordings.filter(r => r.totalCarry > 0);
+            if (withCarries.length > 0) {
+                const avgCentroid = withCarries.reduce((s, r) => s + (r.carryCentroidNormalized || 0), 0) / withCarries.length;
+                const avgSpread = withCarries.reduce((s, r) => s + (r.carrySpread || 0), 0) / withCarries.length;
+                
+                // Correlate with ratio
+                const centroidVals = withCarries.map(r => r.carryCentroidNormalized || 0);
+                const spreadVals = withCarries.map(r => r.carrySpread || 0);
+                const ratioVals = withCarries.map(r => r.ratio);
+                
+                const centroidRatioCorr = computeCorrelation(centroidVals, ratioVals);
+                const spreadRatioCorr = computeCorrelation(spreadVals, ratioVals);
+                
+                html += `<p>Average carry centroid: ${avgCentroid.toFixed(3)} (0.5 = middle)</p>`;
+                html += `<p>Average carry spread: ${avgSpread.toFixed(3)} (1.0 = all positions)</p>`;
+                html += `<p>Centroid↔Ratio correlation: <span style="color: ${Math.abs(centroidRatioCorr) > 0.3 ? '#00ff88' : '#888'};">${centroidRatioCorr.toFixed(4)}</span></p>`;
+                html += `<p>Spread↔Ratio correlation: <span style="color: ${Math.abs(spreadRatioCorr) > 0.3 ? '#00ff88' : '#888'};">${spreadRatioCorr.toFixed(4)}</span></p>`;
+            }
+            
+            html += '</div>';
+            
+            html += '</div>';
+            
+            analysis.innerHTML = html;
+            
+            // Also render spiral comparison
+            renderRecordingsSpiral();
+        }
+        
+        function runLargeBatch(count) {
+            recordings = [];
+            
+            const statusDiv = document.getElementById('recordingsList');
+            statusDiv.innerHTML = `<p style="color: #ffaa00;">⏳ Generating ${count} semiprimes...</p>`;
+            
+            // Use setTimeout to allow UI update
+            setTimeout(() => {
+                // Generate diverse semiprimes
+                const balancedCount = Math.floor(count * 0.35);
+                const moderateCount = Math.floor(count * 0.35);
+                const unbalancedCount = count - balancedCount - moderateCount;
+                
+                // Balanced pairs
+                for (let i = 0; i < balancedCount; i++) {
+                    const idx = Math.floor(Math.random() * (primes.length - 5)) + 5;
+                    const offset = Math.floor(Math.random() * 4) + 1;
+                    const p = primes[idx];
+                    const q = primes[Math.min(idx + offset, primes.length - 1)];
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + i, category: 'balanced'});
+                }
+                
+                // Moderately unbalanced
+                for (let i = 0; i < moderateCount; i++) {
+                    const idx1 = Math.floor(Math.random() * 40) + 5;
+                    const idx2 = idx1 + Math.floor(Math.random() * 40) + 10;
+                    const p = primes[idx1];
+                    const q = primes[Math.min(idx2, primes.length - 1)];
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + balancedCount + i, category: 'moderate'});
+                }
+                
+                // Very unbalanced
+                for (let i = 0; i < unbalancedCount; i++) {
+                    const p = primes[Math.floor(Math.random() * 25)]; // small prime
+                    const q = primes[primes.length - 1 - Math.floor(Math.random() * 30)]; // large prime
+                    const construction = performMultiplication(p, q, 10);
+                    recordings.push({...construction, id: Date.now() + balancedCount + moderateCount + i, category: 'unbalanced'});
+                }
+                
+                updateRecordingsList();
+                runFullAnalysis();
+            }, 50);
+        }
+        
+        function runFullAnalysis() {
+            if (recordings.length < 10) {
+                alert('Need at least 10 recordings');
+                return;
+            }
+            
+            const panel = document.getElementById('patternPanel');
+            const analysis = document.getElementById('patternAnalysis');
+            panel.style.display = 'block';
+            
+            const sorted = [...recordings].sort((a, b) => a.ratio - b.ratio);
+            
+            let html = '<div class="pattern-alert">';
+            html += `<h3>🔬 Large-Scale Analysis (n = ${recordings.length})</h3>`;
+            
+            // ============ THE 0.003 CONSTANT TEST ============
+            html += '<div style="background: #002244; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>📐 Testing the Carry/Sum Constant</h4>';
+            
+            const carryRatios = recordings.map(r => r.carryToSumRatio);
+            const nonZeroCarryRatios = recordings.filter(r => r.totalCarry > 0).map(r => r.carryToSumRatio);
+            
+            const avgAll = carryRatios.reduce((a, b) => a + b, 0) / carryRatios.length;
+            const avgNonZero = nonZeroCarryRatios.length > 0 ? 
+                nonZeroCarryRatios.reduce((a, b) => a + b, 0) / nonZeroCarryRatios.length : 0;
+            
+            const stdAll = Math.sqrt(carryRatios.reduce((sum, x) => sum + (x - avgAll) ** 2, 0) / carryRatios.length);
+            const stdNonZero = nonZeroCarryRatios.length > 0 ?
+                Math.sqrt(nonZeroCarryRatios.reduce((sum, x) => sum + (x - avgNonZero) ** 2, 0) / nonZeroCarryRatios.length) : 0;
+            
+            html += `<table style="width: 100%;">`;
+            html += `<tr><td>All samples (n=${carryRatios.length}):</td><td style="color: #00ffaa;">avg = ${avgAll.toFixed(6)}, std = ${stdAll.toFixed(6)}</td></tr>`;
+            html += `<tr><td>Non-zero carry only (n=${nonZeroCarryRatios.length}):</td><td style="color: #00ffaa;">avg = ${avgNonZero.toFixed(6)}, std = ${stdNonZero.toFixed(6)}</td></tr>`;
+            html += `</table>`;
+            
+            // Test prediction: (p+q) ≈ TotalCarry / constant
+            const predictedSums = recordings.filter(r => r.totalCarry > 0).map(r => ({
+                actual: r.sum,
+                predicted: r.totalCarry / avgNonZero,
+                error: Math.abs(r.sum - r.totalCarry / avgNonZero) / r.sum
+            }));
+            
+            const avgPredictionError = predictedSums.length > 0 ?
+                predictedSums.reduce((sum, p) => sum + p.error, 0) / predictedSums.length : 0;
+            
+            html += `<p style="margin-top: 10px;"><strong>Prediction test:</strong> (p+q) ≈ TotalCarry / ${avgNonZero.toFixed(6)}</p>`;
+            html += `<p>Average relative error: <span style="color: ${avgPredictionError < 0.3 ? '#00ff88' : '#ff8800'};">${(avgPredictionError * 100).toFixed(1)}%</span></p>`;
+            
+            if (avgNonZero > 0.001 && avgNonZero < 0.01) {
+                html += `<p style="color: #00ff88; font-weight: bold;">✓ Constant appears stable around ${avgNonZero.toFixed(4)}</p>`;
+            }
+            
+            html += '</div>';
+            
+            // ============ CORRELATION ANALYSIS ============
+            html += '<div style="background: #220044; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>📊 Correlation Analysis</h4>';
+            
+            const ratios = sorted.map(r => r.ratio);
+            const sums = sorted.map(r => r.sum);
+            const diffs = sorted.map(r => r.diff);
+            const carries = sorted.map(r => r.totalCarry);
+            const carryRatioVals = sorted.map(r => r.carryToSumRatio);
+            const fftCorrs = sorted.map(r => r.correlation);
+            
+            const correlations = {
+                'ratio_carryRatio': computeCorrelation(ratios, carryRatioVals),
+                'ratio_fftCorr': computeCorrelation(ratios, fftCorrs),
+                'sum_carry': computeCorrelation(sums, carries),
+                'diff_carry': computeCorrelation(diffs, carries),
+                'ratio_carry': computeCorrelation(ratios, carries),
+                // Grok's carry position features
+                'ratio_centroid': computeCorrelation(ratios, sorted.map(r => r.carryCentroidNormalized || 0)),
+                'ratio_spread': computeCorrelation(ratios, sorted.map(r => r.carrySpread || 0)),
+                'ratio_edgeMiddle': computeCorrelation(ratios, sorted.map(r => r.edgeToMiddleRatio || 0))
+            };
+            
+            html += '<table style="width: 100%;">';
+            Object.entries(correlations).forEach(([name, corr]) => {
+                const color = Math.abs(corr) > 0.5 ? '#00ff88' : Math.abs(corr) > 0.3 ? '#ffaa00' : '#888';
+                const strength = Math.abs(corr) > 0.5 ? 'STRONG' : Math.abs(corr) > 0.3 ? 'moderate' : 'weak';
+                html += `<tr>
+                    <td style="padding: 3px;">${name.replace('_', ' vs ')}</td>
+                    <td style="color: ${color}; text-align: right;">${corr.toFixed(4)} (${strength})</td>
+                </tr>`;
+            });
+            html += '</table>';
+            html += '</div>';
+            
+            // ============ ZERO CARRY ANALYSIS ============
+            html += '<div style="background: #442200; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>🔍 Zero-Carry Pattern Analysis</h4>';
+            
+            const zeroCarry = recordings.filter(r => r.totalCarry === 0);
+            const nonZeroCarry = recordings.filter(r => r.totalCarry > 0);
+            
+            html += `<p>Zero carry cases: ${zeroCarry.length} / ${recordings.length} (${(100 * zeroCarry.length / recordings.length).toFixed(1)}%)</p>`;
+            
+            if (zeroCarry.length > 0) {
+                const zeroCarryRatios = zeroCarry.map(r => r.ratio);
+                const avgZeroRatio = zeroCarryRatios.reduce((a, b) => a + b, 0) / zeroCarryRatios.length;
+                const minZeroRatio = Math.min(...zeroCarryRatios);
+                const maxZeroRatio = Math.max(...zeroCarryRatios);
+                
+                html += `<p>Zero-carry average ratio: ${avgZeroRatio.toFixed(3)} (range: ${minZeroRatio.toFixed(3)} - ${maxZeroRatio.toFixed(3)})</p>`;
+                
+                const nonZeroRatios = nonZeroCarry.map(r => r.ratio);
+                const avgNonZeroRatio = nonZeroRatios.reduce((a, b) => a + b, 0) / nonZeroRatios.length;
+                
+                html += `<p>Non-zero-carry average ratio: ${avgNonZeroRatio.toFixed(3)}</p>`;
+                
+                if (avgZeroRatio > avgNonZeroRatio * 1.2) {
+                    html += `<p style="color: #ff8800; font-weight: bold;">⚠️ Zero carries correlate with higher ratios (more unbalanced)</p>`;
+                }
+            }
+            
+            html += '</div>';
+            
+            // ============ FERMAT SPEEDUP ESTIMATOR ============
+            html += '<div style="background: #004422; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>⚡ Fermat Speedup Estimator</h4>';
+            
+            // Build estimator based on carry count
+            // Fermat iterations ≈ (q - √N) = (q - p) / (1 + p/q) ≈ diff / 2 for balanced
+            
+            const fermatData = recordings.map(r => ({
+                ...r,
+                fermatIterations: Math.ceil((r.q - Math.sqrt(r.N))), // approximate
+                carryBucket: r.totalCarry === 0 ? 'zero' : r.totalCarry <= 2 ? 'low' : 'high'
+            }));
+            
+            const buckets = {
+                zero: fermatData.filter(d => d.carryBucket === 'zero'),
+                low: fermatData.filter(d => d.carryBucket === 'low'),
+                high: fermatData.filter(d => d.carryBucket === 'high')
+            };
+            
+            html += '<table style="width: 100%;">';
+            html += '<tr style="border-bottom: 1px solid #444;"><th>Carry Bucket</th><th>Count</th><th>Avg Ratio</th><th>Avg Fermat Iters</th><th>Verdict</th></tr>';
+            
+            Object.entries(buckets).forEach(([name, data]) => {
+                if (data.length > 0) {
+                    const avgRatio = data.reduce((s, d) => s + d.ratio, 0) / data.length;
+                    const avgIters = data.reduce((s, d) => s + d.fermatIterations, 0) / data.length;
+                    const verdict = avgRatio < 1.1 ? '🚀 Fast' : avgRatio < 1.5 ? '⏱️ Medium' : '🐌 Slow';
+                    
+                    html += `<tr>
+                        <td style="padding: 5px;">${name} (${name === 'zero' ? '0' : name === 'low' ? '1-2' : '3+'})</td>
+                        <td>${data.length}</td>
+                        <td style="color: #00ffaa;">${avgRatio.toFixed(3)}</td>
+                        <td style="color: #ffaa00;">${avgIters.toFixed(0)}</td>
+                        <td>${verdict}</td>
+                    </tr>`;
+                }
+            });
+            html += '</table>';
+            
+            // Decision rule
+            html += '<div style="margin-top: 15px; padding: 10px; background: #003311; border-radius: 4px;">';
+            html += '<strong>🎯 Fermat Decision Rule (from data):</strong><br>';
+            
+            if (buckets.high.length > 0 && buckets.zero.length > 0) {
+                const highAvgRatio = buckets.high.reduce((s, d) => s + d.ratio, 0) / buckets.high.length;
+                const zeroAvgRatio = buckets.zero.reduce((s, d) => s + d.ratio, 0) / buckets.zero.length;
+                
+                if (highAvgRatio < zeroAvgRatio * 0.8) {
+                    html += '• <span style="color: #00ff88;">High carries (3+) → Likely balanced → Fermat RECOMMENDED</span><br>';
+                    html += '• <span style="color: #ff8800;">Zero carries → Likely unbalanced → Try other methods</span>';
+                }
+            }
+            
+            html += '</div></div>';
+            
+            // ============ STATISTICAL SUMMARY TABLE ============
+            html += '<h4 style="margin-top: 20px;">📋 Full Dataset</h4>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">';
+            html += '<tr style="border-bottom: 1px solid #444; position: sticky; top: 0; background: #111;">';
+            html += '<th style="padding: 5px;">p × q</th>';
+            html += '<th>N</th>';
+            html += '<th>Ratio</th>';
+            html += '<th>|p-q|</th>';
+            html += '<th>Σcarry</th>';
+            html += '<th>carry/sum</th>';
+            html += '<th>FFT corr</th>';
+            html += '</tr>';
+            
+            sorted.forEach(r => {
+                const ratioColor = r.ratio < 1.1 ? '#00ff88' : r.ratio < 1.5 ? '#ffaa00' : '#ff5555';
+                const carryColor = r.totalCarry === 0 ? '#ff5555' : r.totalCarry >= 3 ? '#00ff88' : '#ffaa00';
+                
+                html += `<tr style="border-bottom: 1px solid #222;">
+                    <td style="padding: 3px;">${r.p} × ${r.q}</td>
+                    <td style="color: #888;">${r.N.toLocaleString()}</td>
+                    <td style="color: ${ratioColor};">${r.ratio.toFixed(4)}</td>
+                    <td>${r.diff}</td>
+                    <td style="color: ${carryColor};">${r.totalCarry}</td>
+                    <td>${r.carryToSumRatio.toFixed(5)}</td>
+                    <td>${r.correlation.toFixed(3)}</td>
+                </tr>`;
+            });
+            
+            html += '</table></div>';
+            
+            // ============ KEY FINDINGS ============
+            html += '<div style="background: #004444; padding: 15px; margin: 15px 0; border-radius: 8px;">';
+            html += '<h4>🧬 Key Findings</h4>';
+            html += '<ul style="margin: 10px 0; padding-left: 20px;">';
+            
+            if (Math.abs(correlations.sum_carry) > 0.4) {
+                html += `<li style="color: #00ff88;"><strong>SIGNAL:</strong> (p+q) correlates with carry count (r = ${correlations.sum_carry.toFixed(3)})</li>`;
+            }
+            
+            if (avgNonZero > 0.001 && avgNonZero < 0.01 && stdNonZero < avgNonZero) {
+                html += `<li style="color: #00ff88;"><strong>CONSTANT:</strong> carry/sum ≈ ${avgNonZero.toFixed(4)} appears stable</li>`;
+            }
+            
+            if (zeroCarry.length > 0 && zeroCarry.length < recordings.length * 0.5) {
+                const zeroAvg = zeroCarry.reduce((s, r) => s + r.ratio, 0) / zeroCarry.length;
+                const nonZeroAvg = nonZeroCarry.reduce((s, r) => s + r.ratio, 0) / nonZeroCarry.length;
+                if (zeroAvg > nonZeroAvg * 1.1) {
+                    html += `<li style="color: #ffaa00;"><strong>PATTERN:</strong> Zero carries → higher ratio (${zeroAvg.toFixed(2)} vs ${nonZeroAvg.toFixed(2)})</li>`;
+                }
+            }
+            
+            html += '</ul></div>';
+            
+            html += '</div>';
+            analysis.innerHTML = html;
+            
+            // Build prediction model automatically
+            buildPredictionModel();
+        }
+        
+        function analyzeRecordings() {
+            runFullAnalysis();
+        }
+        
+        // Initialize
+        startConstruction();
+        
+        // ========== CARRY PREDICTION SYSTEM ==========
+        
+        let predictionModel = null;
+        
+        // Features we can extract from N alone
+        function extractFeaturesFromN(N) {
+            const nStr = String(N);
+            const digits = nStr.split('').map(Number);
+            const n = digits.length;
+            
+            // Basic digit statistics
+            const digitSum = digits.reduce((a, b) => a + b, 0);
+            const digitMean = digitSum / n;
+            const digitVariance = digits.reduce((sum, d) => sum + (d - digitMean) ** 2, 0) / n;
+            const digitStd = Math.sqrt(digitVariance);
+            
+            // Adjacent digit differences
+            const adjDiffs = [];
+            for (let i = 1; i < n; i++) {
+                adjDiffs.push(Math.abs(digits[i] - digits[i-1]));
+            }
+            const avgAdjDiff = adjDiffs.length > 0 ? adjDiffs.reduce((a, b) => a + b, 0) / adjDiffs.length : 0;
+            
+            // Digit products (simulate partial overlap)
+            const adjProducts = [];
+            for (let i = 1; i < n; i++) {
+                adjProducts.push(digits[i] * digits[i-1]);
+            }
+            const avgAdjProduct = adjProducts.length > 0 ? adjProducts.reduce((a, b) => a + b, 0) / adjProducts.length : 0;
+            const maxAdjProduct = adjProducts.length > 0 ? Math.max(...adjProducts) : 0;
+            
+            // How many adjacent products exceed base (would cause carry)
+            const adjProductsOver10 = adjProducts.filter(p => p >= 10).length;
+            
+            // "Middle weight" - sum of middle digits (where carries accumulate most)
+            const middleStart = Math.floor(n / 4);
+            const middleEnd = Math.ceil(3 * n / 4);
+            const middleDigits = digits.slice(middleStart, middleEnd);
+            const middleWeight = middleDigits.reduce((a, b) => a + b, 0);
+            
+            // FFT features
+            const fft = computeFFT(digits);
+            const fftMax = Math.max(...fft);
+            const fftSum = fft.reduce((a, b) => a + b, 0);
+            const dominantFreq = fft.indexOf(fftMax);
+            
+            // Second moment of digits
+            const secondMoment = digits.reduce((sum, d) => sum + d * d, 0) / n;
+            
+            // Asymmetry (compare first half to second half)
+            const halfN = Math.floor(n / 2);
+            const firstHalfSum = digits.slice(0, halfN).reduce((a, b) => a + b, 0);
+            const secondHalfSum = digits.slice(halfN).reduce((a, b) => a + b, 0);
+            const asymmetry = Math.abs(firstHalfSum - secondHalfSum) / (digitSum || 1);
+            
+            // sqrt(N) proximity - how close is N to a perfect square?
+            const sqrtN = Math.sqrt(N);
+            const nearestSquare = Math.round(sqrtN) ** 2;
+            const sqrtProximity = Math.abs(N - nearestSquare) / N;
+            
+            // Estimate of 2*sqrt(N) for Fermat reference
+            const twoSqrtN = 2 * sqrtN;
+            
+            return {
+                N,
+                numDigits: n,
+                digitSum,
+                digitMean,
+                digitStd,
+                digitVariance,
+                avgAdjDiff,
+                avgAdjProduct,
+                maxAdjProduct,
+                adjProductsOver10,
+                middleWeight,
+                fftMax,
+                fftSum,
+                dominantFreq,
+                secondMoment,
+                asymmetry,
+                sqrtProximity,
+                twoSqrtN,
+                // Derived features
+                digitSumNormalized: digitSum / n,
+                varianceToMeanRatio: digitVariance / (digitMean || 1),
+                middleWeightNormalized: middleWeight / (middleDigits.length || 1)
+            };
+        }
+        
+        function predictFromN() {
+            const N = parseInt(document.getElementById('predictN').value);
+            if (isNaN(N) || N < 4) {
+                alert('Please enter a valid semiprime');
+                return;
+            }
+            
+            const features = extractFeaturesFromN(N);
+            const results = document.getElementById('predictionResults');
+            const reverse = document.getElementById('reverseAnalysis');
+            
+            let html = '<div class="pattern-alert">';
+            html += `<h3>📊 Features Extracted from N = ${N.toLocaleString()}</h3>`;
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            
+            const featureList = [
+                ['Number of digits', features.numDigits],
+                ['Digit sum', features.digitSum],
+                ['Digit mean', features.digitMean.toFixed(2)],
+                ['Digit std dev', features.digitStd.toFixed(2)],
+                ['Avg adjacent difference', features.avgAdjDiff.toFixed(2)],
+                ['Avg adjacent product', features.avgAdjProduct.toFixed(2)],
+                ['Max adjacent product', features.maxAdjProduct],
+                ['Adjacent products ≥ 10', features.adjProductsOver10],
+                ['Middle weight (normalized)', features.middleWeightNormalized.toFixed(2)],
+                ['FFT max magnitude', features.fftMax.toFixed(3)],
+                ['Dominant frequency', features.dominantFreq],
+                ['Asymmetry (first/second half)', features.asymmetry.toFixed(3)],
+                ['√N proximity to square', features.sqrtProximity.toFixed(4)],
+                ['2√N (Fermat ref)', features.twoSqrtN.toFixed(2)]
+            ];
+            
+            featureList.forEach(([name, value]) => {
+                html += `<tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 5px; color: #888;">${name}</td>
+                    <td style="padding: 5px; color: #00ffaa; text-align: right;">${value}</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            
+            // Make predictions if we have a model
+            if (predictionModel) {
+                const prediction = applyPredictionModel(features);
+                html += `<div style="margin-top: 15px; padding: 15px; background: #003322; border-radius: 8px;">`;
+                html += `<h4>🔮 Model Predictions</h4>`;
+                html += `<p><strong>Predicted carry count:</strong> <span style="color: #ffaa00; font-size: 1.3em;">${prediction.carryCount.toFixed(1)}</span></p>`;
+                html += `<p><strong>Predicted balance (ratio):</strong> <span style="color: #ffaa00; font-size: 1.3em;">${prediction.ratio.toFixed(3)}</span></p>`;
+                html += `<p><strong>Factor balance:</strong> ${prediction.ratio < 1.1 ? '⚖️ Likely BALANCED' : prediction.ratio < 1.5 ? '📊 Moderately unbalanced' : '📐 Likely UNBALANCED'}</p>`;
+                
+                if (prediction.ratio < 1.1) {
+                    html += `<p style="color: #00ff88;">→ Fermat's method should work well (factors close to √N)</p>`;
+                } else if (prediction.ratio > 2) {
+                    html += `<p style="color: #ff8800;">→ Fermat's method will be slow (factors far from √N)</p>`;
+                }
+                html += '</div>';
+            } else {
+                html += `<p style="color: #888; margin-top: 15px;">💡 Click "Train Model" with recorded constructions to enable predictions.</p>`;
+            }
+            
+            html += '</div>';
+            results.innerHTML = html;
+            
+            // Reverse engineering analysis
+            let revHtml = '<div class="pattern-alert">';
+            revHtml += '<h3>🔬 What N Reveals About Its Construction</h3>';
+            
+            // Heuristic analysis based on features
+            revHtml += '<div style="margin: 10px 0;">';
+            
+            // High middle weight suggests more carry activity
+            if (features.middleWeightNormalized > 5) {
+                revHtml += '<p>📊 <strong>High middle digit weight</strong> → likely more carry propagation during construction</p>';
+            }
+            
+            // Adjacent products analysis
+            if (features.adjProductsOver10 > features.numDigits / 2) {
+                revHtml += '<p>🔥 <strong>Many adjacent products ≥ 10</strong> → construction had significant carry cascades</p>';
+            } else if (features.adjProductsOver10 === 0) {
+                revHtml += '<p>❄️ <strong>No adjacent products ≥ 10</strong> → minimal carry activity (likely unbalanced factors)</p>';
+            }
+            
+            // Asymmetry
+            if (features.asymmetry > 0.3) {
+                revHtml += '<p>⚖️ <strong>High digit asymmetry</strong> → factors likely have different digit counts</p>';
+            } else {
+                revHtml += '<p>⚖️ <strong>Low digit asymmetry</strong> → factors likely have similar size</p>';
+            }
+            
+            // Digit variance
+            if (features.digitStd > 3) {
+                revHtml += '<p>📈 <strong>High digit variance</strong> → complex multiplication pattern</p>';
+            }
+            
+            revHtml += '</div>';
+            
+            // Factor estimation based on features
+            revHtml += '<h4 style="margin-top: 15px;">🎯 Factor Size Estimation</h4>';
+            const sqrtN = Math.sqrt(N);
+            
+            // Heuristic: low carry indicators suggest unbalanced
+            let balanceEstimate = 'unknown';
+            let estimatedRatio = 1.0;
+            
+            if (features.adjProductsOver10 === 0 && features.middleWeightNormalized < 4) {
+                balanceEstimate = 'likely unbalanced';
+                estimatedRatio = 1.5 + features.asymmetry * 2;
+            } else if (features.adjProductsOver10 >= features.numDigits / 3) {
+                balanceEstimate = 'likely balanced';
+                estimatedRatio = 1.0 + features.asymmetry * 0.5;
+            } else {
+                balanceEstimate = 'moderate';
+                estimatedRatio = 1.1 + features.asymmetry;
+            }
+            
+            revHtml += `<p>Estimated factor balance: <strong style="color: #00ffaa;">${balanceEstimate}</strong></p>`;
+            revHtml += `<p>√N = ${sqrtN.toFixed(2)}</p>`;
+            revHtml += `<p>If balanced: p ≈ q ≈ ${sqrtN.toFixed(0)}</p>`;
+            revHtml += `<p>Estimated search range: [${(sqrtN / estimatedRatio).toFixed(0)}, ${sqrtN.toFixed(0)}]</p>`;
+            
+            revHtml += '</div>';
+            reverse.innerHTML = revHtml;
+        }
+        
+        function buildPredictionModel() {
+            if (recordings.length < 5) {
+                alert('Need at least 5 recorded constructions to build model. Click "Batch (20)" first.');
+                return;
+            }
+            
+            // Extract features and targets from recordings
+            const trainingData = recordings.map(r => ({
+                features: extractFeaturesFromN(r.N),
+                actualCarries: r.totalCarry,
+                actualRatio: r.ratio,
+                actualSum: r.sum,
+                actualDiff: r.diff
+            }));
+            
+            // Simple linear regression for carry prediction
+            // Features: adjProductsOver10, middleWeightNormalized, digitStd, asymmetry
+            
+            // Compute correlations with actual carries
+            const correlations = {};
+            const featureNames = ['adjProductsOver10', 'middleWeightNormalized', 'digitStd', 'asymmetry', 'avgAdjProduct', 'digitSum'];
+            
+            featureNames.forEach(fname => {
+                const x = trainingData.map(d => d.features[fname]);
+                const y = trainingData.map(d => d.actualCarries);
+                correlations[fname + '_carry'] = computeCorrelation(x, y);
+                
+                const yRatio = trainingData.map(d => d.actualRatio);
+                correlations[fname + '_ratio'] = computeCorrelation(x, yRatio);
+            });
+            
+            // Find best predictors
+            let bestCarryPredictor = null;
+            let bestCarryCorr = 0;
+            let bestRatioPredictor = null;
+            let bestRatioCorr = 0;
+            
+            featureNames.forEach(fname => {
+                if (Math.abs(correlations[fname + '_carry']) > Math.abs(bestCarryCorr)) {
+                    bestCarryCorr = correlations[fname + '_carry'];
+                    bestCarryPredictor = fname;
+                }
+                if (Math.abs(correlations[fname + '_ratio']) > Math.abs(bestRatioCorr)) {
+                    bestRatioCorr = correlations[fname + '_ratio'];
+                    bestRatioPredictor = fname;
+                }
+            });
+            
+            // Build simple linear models
+            // Carry model
+            const carryX = trainingData.map(d => d.features[bestCarryPredictor]);
+            const carryY = trainingData.map(d => d.actualCarries);
+            const carryModel = linearRegression(carryX, carryY);
+            
+            // Ratio model (use asymmetry as it should correlate)
+            const ratioX = trainingData.map(d => d.features[bestRatioPredictor]);
+            const ratioY = trainingData.map(d => d.actualRatio);
+            const ratioModel = linearRegression(ratioX, ratioY);
+            
+            // Also build multi-feature model for ratio
+            // Use: asymmetry, adjProductsOver10/numDigits
+            const multiRatioModel = buildMultiFeatureModel(trainingData);
+            
+            predictionModel = {
+                carryPredictor: bestCarryPredictor,
+                carryCorrelation: bestCarryCorr,
+                carrySlope: carryModel.slope,
+                carryIntercept: carryModel.intercept,
+                ratioPredictor: bestRatioPredictor,
+                ratioCorrelation: bestRatioCorr,
+                ratioSlope: ratioModel.slope,
+                ratioIntercept: ratioModel.intercept,
+                multiRatioModel,
+                correlations,
+                trainingSize: trainingData.length
+            };
+            
+            // Display model info
+            const results = document.getElementById('predictionResults');
+            let html = '<div class="pattern-alert">';
+            html += '<h3>🧠 Prediction Model Trained</h3>';
+            html += `<p>Training samples: ${trainingData.length}</p>`;
+            html += '<h4>Feature Correlations with Carry Count:</h4>';
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            featureNames.forEach(fname => {
+                const corr = correlations[fname + '_carry'];
+                const color = Math.abs(corr) > 0.5 ? '#00ff88' : Math.abs(corr) > 0.3 ? '#ffaa00' : '#888';
+                html += `<tr><td style="padding: 3px;">${fname}</td><td style="color: ${color}; text-align: right;">${corr.toFixed(4)}</td></tr>`;
+            });
+            html += '</table>';
+            
+            html += '<h4 style="margin-top: 10px;">Feature Correlations with Ratio:</h4>';
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            featureNames.forEach(fname => {
+                const corr = correlations[fname + '_ratio'];
+                const color = Math.abs(corr) > 0.5 ? '#00ff88' : Math.abs(corr) > 0.3 ? '#ffaa00' : '#888';
+                html += `<tr><td style="padding: 3px;">${fname}</td><td style="color: ${color}; text-align: right;">${corr.toFixed(4)}</td></tr>`;
+            });
+            html += '</table>';
+            
+            html += `<p style="margin-top: 10px;"><strong>Best carry predictor:</strong> ${bestCarryPredictor} (r=${bestCarryCorr.toFixed(3)})</p>`;
+            html += `<p><strong>Best ratio predictor:</strong> ${bestRatioPredictor} (r=${bestRatioCorr.toFixed(3)})</p>`;
+            
+            html += '<p style="color: #00ff88; margin-top: 10px;">✓ Model ready. Enter an N and click "Predict Carries"</p>';
+            html += '</div>';
+            
+            results.innerHTML = html;
+        }
+        
+        function linearRegression(x, y) {
+            const n = x.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            
+            for (let i = 0; i < n; i++) {
+                sumX += x[i];
+                sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i];
+            }
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            return { slope: isNaN(slope) ? 0 : slope, intercept: isNaN(intercept) ? 0 : intercept };
+        }
+        
+        function buildMultiFeatureModel(trainingData) {
+            // Simple approach: weighted combination of normalized features
+            // Target: ratio
+            
+            // Compute means and stds for normalization
+            const features = ['asymmetry', 'adjProductsOver10', 'middleWeightNormalized'];
+            const stats = {};
+            
+            features.forEach(f => {
+                const values = trainingData.map(d => d.features[f]);
+                const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                const std = Math.sqrt(values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length) || 1;
+                stats[f] = { mean, std };
+            });
+            
+            // For now, use a simple heuristic model based on observations:
+            // Higher asymmetry → higher ratio
+            // Fewer adjProductsOver10 → higher ratio (more unbalanced)
+            
+            return {
+                stats,
+                predict: function(features) {
+                    const normAsym = (features.asymmetry - stats.asymmetry.mean) / stats.asymmetry.std;
+                    const normAdj = (features.adjProductsOver10 - stats.adjProductsOver10.mean) / stats.adjProductsOver10.std;
+                    
+                    // Heuristic formula (tuned based on observations)
+                    let ratio = 1.0 + 0.3 * normAsym - 0.1 * normAdj;
+                    ratio = Math.max(1.0, ratio); // Ratio can't be below 1
+                    
+                    return ratio;
+                }
+            };
+        }
+        
+        function applyPredictionModel(features) {
+            if (!predictionModel) return { carryCount: 0, ratio: 1.0 };
+            
+            const carryCount = predictionModel.carrySlope * features[predictionModel.carryPredictor] + predictionModel.carryIntercept;
+            
+            // Use multi-feature model for ratio
+            const ratio = predictionModel.multiRatioModel.predict(features);
+            
+            return {
+                carryCount: Math.max(0, carryCount),
+                ratio: ratio
+            };
+        }
+        
+        function testPredictionBlind() {
+            if (!predictionModel) {
+                alert('Train the model first by clicking "Train Model"');
+                return;
+            }
+            
+            // Generate diverse test cases - balanced AND unbalanced
+            const smallPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+            const mediumPrimes = [251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347];
+            const largePrimes = [1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069, 1087, 1091, 1093, 1097];
+            
+            let p, q;
+            const testType = Math.random();
+            
+            if (testType < 0.33) {
+                // Balanced: both from same range
+                const pool = mediumPrimes;
+                p = pool[Math.floor(Math.random() * pool.length)];
+                q = pool[Math.floor(Math.random() * pool.length)];
+            } else if (testType < 0.66) {
+                // Moderately unbalanced: small × medium
+                p = smallPrimes[Math.floor(Math.random() * smallPrimes.length)];
+                q = mediumPrimes[Math.floor(Math.random() * mediumPrimes.length)];
+            } else {
+                // Very unbalanced: small × large
+                p = smallPrimes[Math.floor(Math.random() * smallPrimes.length)];
+                q = largePrimes[Math.floor(Math.random() * largePrimes.length)];
+            }
+            
+            // Ensure p < q for consistency
+            if (p > q) [p, q] = [q, p];
+            
+            const N = p * q;
+            
+            // Predict from N alone
+            const features = extractFeaturesFromN(N);
+            const prediction = applyPredictionModel(features);
+            
+            // Compute actual
+            const actual = performMultiplication(p, q, 10);
+            
+            const results = document.getElementById('predictionResults');
+            let html = '<div class="pattern-alert">';
+            html += '<h3>🎯 Blind Test Results</h3>';
+            html += `<p>Generated: N = ${N} (you don't know p and q yet)</p>`;
+            html += '<table style="width: 100%; border-collapse: collapse; margin: 10px 0;">';
+            html += '<tr style="border-bottom: 1px solid #444;"><th></th><th>Predicted</th><th>Actual</th><th>Error</th></tr>';
+            
+            const carryError = Math.abs(prediction.carryCount - actual.totalCarry);
+            const ratioError = Math.abs(prediction.ratio - actual.ratio);
+            
+            html += `<tr>
+                <td style="padding: 5px;">Carry count</td>
+                <td style="color: #ffaa00;">${prediction.carryCount.toFixed(1)}</td>
+                <td style="color: #00ffaa;">${actual.totalCarry}</td>
+                <td style="color: ${carryError < 1 ? '#00ff88' : '#ff8800'};">${carryError.toFixed(1)}</td>
+            </tr>`;
+            html += `<tr>
+                <td style="padding: 5px;">Ratio (p+q)/2√N</td>
+                <td style="color: #ffaa00;">${prediction.ratio.toFixed(3)}</td>
+                <td style="color: #00ffaa;">${actual.ratio.toFixed(3)}</td>
+                <td style="color: ${ratioError < 0.2 ? '#00ff88' : '#ff8800'};">${ratioError.toFixed(3)}</td>
+            </tr>`;
+            html += '</table>';
+            
+            // Reveal
+            html += `<div style="margin-top: 15px; padding: 10px; background: #222; border-radius: 4px;">`;
+            html += `<p><strong>Reveal:</strong> p = ${p}, q = ${q}</p>`;
+            html += `<p>p + q = ${actual.sum}, |p - q| = ${actual.diff}</p>`;
+            html += `<p>Actual carries: [${actual.carries.join(', ')}]</p>`;
+            html += '</div>';
+            
+            // Assessment
+            let assessment = '';
+            if (ratioError < 0.1) {
+                assessment = '🎯 Excellent ratio prediction!';
+            } else if (ratioError < 0.3) {
+                assessment = '👍 Good ratio prediction';
+            } else {
+                assessment = '📊 Ratio prediction needs improvement';
+            }
+            
+            if (prediction.ratio < 1.2 && actual.ratio < 1.2) {
+                assessment += ' | ✓ Correctly identified as BALANCED';
+            } else if (prediction.ratio > 1.5 && actual.ratio > 1.5) {
+                assessment += ' | ✓ Correctly identified as UNBALANCED';
+            } else if ((prediction.ratio < 1.2) !== (actual.ratio < 1.2)) {
+                assessment += ' | ✗ Balance classification wrong';
+            }
+            
+            html += `<p style="margin-top: 10px; font-size: 1.1em;">${assessment}</p>`;
+            html += '</div>';
+            
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

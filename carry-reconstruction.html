@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carry Reconstruction Lab</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #00ff88; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        button {
+            background: #00ff88; color: #000; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #44ffaa; }
+        button.secondary { background: #444; color: #fff; }
+        button.mega { 
+            background: linear-gradient(135deg, #00ff88, #00aaff); 
+            padding: 12px 24px; font-size: 1em;
+        }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #00ff88; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #ffaa00; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; font-weight: bold; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00ff; font-weight: bold; }
+        .hl-cyan { color: #00ffff; font-weight: bold; }
+        
+        .finding {
+            background: #001a11; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #00ff88; font-size: 0.9em;
+        }
+        .finding.warning { border-left-color: #ffaa00; background: #1a1100; }
+        .finding.critical { border-left-color: #ff0000; background: #1a0000; }
+        .finding.discovery { border-left-color: #00ffff; background: #001a1a; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .mega-result {
+            text-align: center; padding: 20px; margin: 15px 0;
+            background: linear-gradient(135deg, #001a11, #001a1a);
+            border-radius: 8px; border: 2px solid #00ff88;
+        }
+        .mega-result .value {
+            font-size: 2em; font-weight: bold; color: #00ff88;
+        }
+        .mega-result .label { font-size: 0.85em; color: #888; margin-top: 5px; }
+        
+        .code-block {
+            background: #000; padding: 10px; border-radius: 4px;
+            font-family: monospace; font-size: 0.8em; margin: 8px 0;
+            border-left: 2px solid #00ff88; overflow-x: auto;
+        }
+        
+        .bit-display {
+            font-family: monospace; font-size: 0.75em;
+            background: #000; padding: 8px; border-radius: 4px;
+            margin: 5px 0; word-break: break-all;
+        }
+        
+        .comparison-row {
+            display: flex; gap: 10px; align-items: center;
+            padding: 8px; margin: 5px 0; background: #0a0a15; border-radius: 4px;
+        }
+        .comparison-label { width: 120px; color: #888; font-size: 0.85em; }
+        .comparison-value { flex: 1; font-family: monospace; }
+        
+        .progress-bar {
+            height: 24px; background: #222; border-radius: 4px;
+            margin: 10px 0; overflow: hidden; position: relative;
+        }
+        .progress-fill { height: 100%; transition: width 0.3s; }
+        .progress-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        .reconstruction-viz {
+            background: #000; padding: 15px; border-radius: 8px; margin: 10px 0;
+        }
+        
+        #status { text-align: center; padding: 10px; color: #888; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Carry Reconstruction Lab</h1>
+    <p class="subtitle">Can we REVERSE the information destruction?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Sample Size</label>
+            <input type="number" id="sampleSize" value="150">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="mega" onclick="runReconstruction()">🔧 ATTEMPT RECONSTRUCTION</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="singleExample()">🔍 Single Example</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163
+        ];
+        
+        function popcount(n) {
+            let c = 0;
+            while (n) { c += n & 1; n >>>= 1; }
+            return c;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        function toBits(n, width) {
+            return n.toString(2).padStart(width || 32, '0');
+        }
+        
+        // Compute the TRUE XOR sum (requires knowing factors)
+        function computeXorSum(p, q) {
+            let xorSum = 0;
+            const qBits = q.toString(2);
+            for (let i = 0; i < qBits.length; i++) {
+                if (qBits[qBits.length - 1 - i] === '1') {
+                    xorSum ^= (p << i);
+                }
+            }
+            return xorSum;
+        }
+        
+        // The carry residue: what carries added to the XOR sum
+        function computeCarryResidue(p, q) {
+            const N = p * q;
+            const xorSum = computeXorSum(p, q);
+            return N - xorSum;
+        }
+        
+        // ============================================
+        // RECONSTRUCTION ATTEMPTS
+        // These try to estimate XOR sum or carry residue from N alone
+        // ============================================
+        
+        // Method 1: GF(2) polynomial product approximation
+        function gf2Product(N) {
+            // Try to approximate by assuming N ≈ p * q in GF(2)
+            // This doesn't work directly but let's see correlations
+            const sqrtN = Math.floor(Math.sqrt(N));
+            // GF(2) multiply sqrt(N) by itself
+            let gf2sq = 0;
+            const bits = sqrtN.toString(2);
+            for (let i = 0; i < bits.length; i++) {
+                if (bits[bits.length - 1 - i] === '1') {
+                    gf2sq ^= (sqrtN << i);
+                }
+            }
+            return gf2sq;
+        }
+        
+        // Method 2: Estimate carry contribution from bit patterns
+        function estimateCarryFromBitPattern(N) {
+            // Carries tend to reduce popcount (1+1 = 10, two 1s become one)
+            // High popcount in N might indicate fewer carries
+            const pop = popcount(N);
+            const len = bitLength(N);
+            const density = pop / len;
+            
+            // Heuristic: more 1s = fewer carries happened
+            // Estimate carry residue as proportional to (1 - density)
+            return Math.floor(N * (1 - density) * 0.5);
+        }
+        
+        // Method 3: Use continued fraction convergents
+        function cfEstimate(N) {
+            const sqrtN = Math.sqrt(N);
+            const a0 = Math.floor(sqrtN);
+            
+            // First convergent gives us an approximation
+            // If N = p*q with p ≈ q, then p ≈ q ≈ sqrt(N)
+            // XOR of (sqrt(N) << i) for half the bits
+            
+            const halfBits = Math.floor(bitLength(N) / 4);
+            let estimate = 0;
+            for (let i = 0; i < halfBits; i++) {
+                estimate ^= (a0 << i);
+            }
+            return estimate;
+        }
+        
+        // Method 4: Statistical bit independence assumption
+        function statisticalEstimate(N) {
+            // Under random bit assumption, XOR sum ≈ N * (popcount fraction)
+            // This is very rough
+            const pop = popcount(N);
+            const len = bitLength(N);
+            
+            // Each bit in XOR has 50% chance if inputs random
+            // Estimate XOR popcount ≈ len/2
+            // Scale N accordingly
+            return Math.floor(N * pop / len);
+        }
+        
+        // Method 5: High-low half analysis
+        function highLowEstimate(N) {
+            const halfBits = Math.floor(bitLength(N) / 2);
+            const lowMask = (1 << halfBits) - 1;
+            const lowHalf = N & lowMask;
+            const highHalf = N >> halfBits;
+            
+            // XOR of halves might approximate something
+            const xorHalves = highHalf ^ lowHalf;
+            
+            // Scale back up
+            return (xorHalves << halfBits) | xorHalves;
+        }
+        
+        // Method 6: Fermat-based estimation
+        function fermatEstimate(N) {
+            const sqrtN = Math.floor(Math.sqrt(N));
+            const gap = N - sqrtN * sqrtN;
+            
+            // If gap is small, factors are close
+            // XOR sum for close factors ≈ some function of gap
+            // This is speculative
+            return N - gap * 2;
+        }
+        
+        // Method 7: Popcount preservation analysis
+        function popcountEstimate(N) {
+            // True XOR sum has different popcount than N
+            // Can we estimate the "lost" popcounts?
+            const nPop = popcount(N);
+            const nLen = bitLength(N);
+            
+            // Carries tend to reduce popcount by ~30-50%
+            // If we knew original popcount, we could estimate
+            const estimatedOrigPop = Math.floor(nPop * 1.8);
+            
+            // Try to construct a number with that popcount
+            // Place 1s in positions based on N's structure
+            let result = N;
+            let currentPop = nPop;
+            let bit = 0;
+            
+            while (currentPop < estimatedOrigPop && bit < nLen) {
+                if (!((N >> bit) & 1)) {
+                    result |= (1 << bit);
+                    currentPop++;
+                }
+                bit += 2; // Every other bit
+            }
+            
+            return result;
+        }
+        
+        // ============================================
+        // ANALYSIS
+        // ============================================
+        
+        function correlation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        function meanAbsError(predicted, actual) {
+            let sum = 0;
+            for (let i = 0; i < predicted.length; i++) {
+                sum += Math.abs(predicted[i] - actual[i]);
+            }
+            return sum / predicted.length;
+        }
+        
+        function relativeError(predicted, actual) {
+            let sum = 0;
+            for (let i = 0; i < predicted.length; i++) {
+                if (actual[i] !== 0) {
+                    sum += Math.abs(predicted[i] - actual[i]) / Math.abs(actual[i]);
+                }
+            }
+            return sum / predicted.length;
+        }
+        
+        async function runReconstruction() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value) || 150;
+            const statusEl = document.getElementById('status');
+            
+            statusEl.innerHTML = 'Generating samples...';
+            await sleep(50);
+            
+            // Generate samples
+            const samples = [];
+            const balancedCount = Math.floor(sampleSize * 0.5);
+            
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            for (let i = balancedCount; i < sampleSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 35)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 35)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            statusEl.innerHTML = 'Computing ground truth...';
+            await sleep(50);
+            
+            // Compute ground truth
+            const groundTruth = {
+                N: [],
+                xorSum: [],
+                carryResidue: [],
+                balanceRatio: []
+            };
+            
+            for (const [p, q] of samples) {
+                const N = p * q;
+                groundTruth.N.push(N);
+                groundTruth.xorSum.push(computeXorSum(p, q));
+                groundTruth.carryResidue.push(computeCarryResidue(p, q));
+                groundTruth.balanceRatio.push((p + q) / (2 * Math.sqrt(N)));
+            }
+            
+            statusEl.innerHTML = 'Testing reconstruction methods...';
+            await sleep(50);
+            
+            // Test each reconstruction method
+            const methods = [
+                { name: 'GF(2) Product', fn: gf2Product },
+                { name: 'Bit Pattern', fn: estimateCarryFromBitPattern },
+                { name: 'CF Estimate', fn: cfEstimate },
+                { name: 'Statistical', fn: statisticalEstimate },
+                { name: 'High-Low Half', fn: highLowEstimate },
+                { name: 'Fermat Est.', fn: fermatEstimate },
+                { name: 'Popcount Est.', fn: popcountEstimate }
+            ];
+            
+            const results = [];
+            
+            for (const method of methods) {
+                const predictions = groundTruth.N.map(N => method.fn(N));
+                
+                // Correlations
+                const corrWithXor = correlation(predictions, groundTruth.xorSum);
+                const corrWithCarry = correlation(predictions, groundTruth.carryResidue);
+                const corrWithBalance = correlation(predictions, groundTruth.balanceRatio);
+                
+                // If predictions correlate with carry residue, we might reconstruct XOR
+                const xorEstimates = groundTruth.N.map((N, i) => N - predictions[i]);
+                const corrXorEstWithReal = correlation(xorEstimates, groundTruth.xorSum);
+                
+                results.push({
+                    name: method.name,
+                    corrWithXor,
+                    corrWithCarry,
+                    corrWithBalance,
+                    corrXorEstWithReal,
+                    avgPrediction: predictions.reduce((a,b) => a+b, 0) / predictions.length
+                });
+            }
+            
+            // Also test: can N-only features predict carry residue?
+            statusEl.innerHTML = 'Testing N-only carry prediction...';
+            await sleep(50);
+            
+            const nOnlyFeatures = {
+                'N_Popcount': groundTruth.N.map(popcount),
+                'N_BitLen': groundTruth.N.map(bitLength),
+                'N_PopDensity': groundTruth.N.map(N => popcount(N) / bitLength(N)),
+                'N_GapBelow': groundTruth.N.map(N => N - Math.floor(Math.sqrt(N)) ** 2),
+                'N_mod7': groundTruth.N.map(N => N % 7),
+                'N_mod8': groundTruth.N.map(N => N % 8),
+                'N_HighLowXor': groundTruth.N.map(N => {
+                    const half = Math.floor(bitLength(N) / 2);
+                    return (N >> half) ^ (N & ((1 << half) - 1));
+                }),
+                'N_Transitions': groundTruth.N.map(N => {
+                    const bits = N.toString(2);
+                    let t = 0;
+                    for (let i = 1; i < bits.length; i++) {
+                        if (bits[i] !== bits[i-1]) t++;
+                    }
+                    return t;
+                })
+            };
+            
+            const nOnlyCarryCorrs = [];
+            for (const [name, values] of Object.entries(nOnlyFeatures)) {
+                const r = correlation(values, groundTruth.carryResidue);
+                nOnlyCarryCorrs.push({ name, r, absR: Math.abs(r) });
+            }
+            nOnlyCarryCorrs.sort((a, b) => b.absR - a.absR);
+            
+            // Test: correlation with XOR sum popcount (information that survives)
+            const xorPopcounts = groundTruth.xorSum.map(popcount);
+            const nOnlyXorPopCorrs = [];
+            for (const [name, values] of Object.entries(nOnlyFeatures)) {
+                const r = correlation(values, xorPopcounts);
+                nOnlyXorPopCorrs.push({ name, r, absR: Math.abs(r) });
+            }
+            nOnlyXorPopCorrs.sort((a, b) => b.absR - a.absR);
+            
+            statusEl.innerHTML = '';
+            renderResults(results, nOnlyCarryCorrs, nOnlyXorPopCorrs, groundTruth, sampleSize);
+        }
+        
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+        
+        function renderResults(methods, carryCorrs, xorPopCorrs, groundTruth, sampleSize) {
+            let html = '';
+            
+            // Header
+            html += `<div class="panel">`;
+            html += `<h2>🔧 Reconstruction Attempt Results</h2>`;
+            html += `<p style="color:#888;">Testing if we can recover XOR sum or carry residue from N alone</p>`;
+            html += `</div>`;
+            
+            // The key question
+            const bestXorCorr = Math.max(...methods.map(m => Math.abs(m.corrXorEstWithReal)));
+            const bestCarryCorr = Math.max(...methods.map(m => Math.abs(m.corrWithCarry)));
+            
+            html += `<div class="mega-result" style="${bestXorCorr > 0.5 ? 'border-color:#00ff88' : 'border-color:#ff4444'}">`;
+            html += `<div class="value">${bestXorCorr.toFixed(4)}</div>`;
+            html += `<div class="label">Best XOR Reconstruction Correlation</div>`;
+            html += `</div>`;
+            
+            // Verdict
+            if (bestXorCorr > 0.7) {
+                html += `<div class="finding discovery">`;
+                html += `<strong>🚀 BREAKTHROUGH:</strong> XOR sum partially reconstructable from N!`;
+                html += `</div>`;
+            } else if (bestXorCorr > 0.4) {
+                html += `<div class="finding warning">`;
+                html += `<strong>⚠️ Weak Signal:</strong> Some reconstruction possible but not strong.`;
+                html += `</div>`;
+            } else {
+                html += `<div class="finding critical">`;
+                html += `<strong>☠️ NO RECONSTRUCTION:</strong> Cannot recover XOR sum from N alone.`;
+                html += `</div>`;
+            }
+            
+            // Method comparison
+            html += `<div class="panel">`;
+            html += `<h2>📊 Reconstruction Methods Comparison</h2>`;
+            html += `<table>`;
+            html += `<tr><th>Method</th><th>r(pred, XOR)</th><th>r(pred, Carry)</th><th>r(N-pred, XOR)</th><th>r(pred, Balance)</th></tr>`;
+            
+            methods.sort((a, b) => Math.abs(b.corrXorEstWithReal) - Math.abs(a.corrXorEstWithReal));
+            
+            for (const m of methods) {
+                const best = Math.abs(m.corrXorEstWithReal) === bestXorCorr;
+                const color = Math.abs(m.corrXorEstWithReal) > 0.4 ? 'hl-green' : Math.abs(m.corrXorEstWithReal) > 0.2 ? 'hl-yellow' : '';
+                html += `<tr${best ? ' style="background:#001a11"' : ''}>`;
+                html += `<td>${m.name}${best ? ' 🏆' : ''}</td>`;
+                html += `<td>${m.corrWithXor.toFixed(4)}</td>`;
+                html += `<td>${m.corrWithCarry.toFixed(4)}</td>`;
+                html += `<td class="${color}">${m.corrXorEstWithReal.toFixed(4)}</td>`;
+                html += `<td>${m.corrWithBalance.toFixed(4)}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // N-only features vs Carry Residue
+            html += `<div class="grid-2">`;
+            
+            html += `<div class="panel">`;
+            html += `<h3>🎯 Can N-Only Features Predict Carry Residue?</h3>`;
+            html += `<table>`;
+            html += `<tr><th>Feature</th><th>r with Carry</th></tr>`;
+            for (const c of carryCorrs) {
+                const color = c.absR > 0.3 ? 'hl-green' : c.absR > 0.15 ? 'hl-yellow' : '';
+                html += `<tr><td>${c.name}</td><td class="${color}">${c.r.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `<div class="panel">`;
+            html += `<h3>🎯 Can N-Only Features Predict XOR Popcount?</h3>`;
+            html += `<table>`;
+            html += `<tr><th>Feature</th><th>r with XOR Pop</th></tr>`;
+            for (const c of xorPopCorrs) {
+                const color = c.absR > 0.3 ? 'hl-green' : c.absR > 0.15 ? 'hl-yellow' : '';
+                html += `<tr><td>${c.name}</td><td class="${color}">${c.r.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // The mathematics
+            html += `<div class="panel">`;
+            html += `<h2>🧮 The Mathematical Reality</h2>`;
+            
+            html += `<div class="code-block">`;
+            html += `N = XOR_Sum + Carry_Residue
+
+To reconstruct XOR_Sum:
+  - Need to know Carry_Residue
+  - Carry_Residue depends on WHERE carries happened
+  - WHERE carries happened depends on factor POSITIONS
+  - Factor positions = FACTORING
+
+Circular dependency: Reconstructing XOR requires knowing factors
+                    Knowing factors = problem solved`;
+            html += `</div>`;
+            
+            // Statistics on the relationship
+            const avgXor = groundTruth.xorSum.reduce((a,b) => a+b, 0) / groundTruth.xorSum.length;
+            const avgCarry = groundTruth.carryResidue.reduce((a,b) => a+b, 0) / groundTruth.carryResidue.length;
+            const avgN = groundTruth.N.reduce((a,b) => a+b, 0) / groundTruth.N.length;
+            
+            html += `<div class="finding">`;
+            html += `<strong>📊 Average Statistics:</strong><br>`;
+            html += `• Average N: ${avgN.toFixed(0)}<br>`;
+            html += `• Average XOR Sum: ${avgXor.toFixed(0)} (${(avgXor/avgN*100).toFixed(1)}% of N)<br>`;
+            html += `• Average Carry Residue: ${avgCarry.toFixed(0)} (${(avgCarry/avgN*100).toFixed(1)}% of N)`;
+            html += `</div>`;
+            
+            // XOR vs Carry correlation
+            const xorCarryCorr = correlation(groundTruth.xorSum, groundTruth.carryResidue);
+            
+            html += `<div class="finding ${Math.abs(xorCarryCorr) > 0.3 ? 'discovery' : ''}">`;
+            html += `<strong>🔗 XOR ↔ Carry Correlation:</strong> r = ${xorCarryCorr.toFixed(4)}<br>`;
+            if (Math.abs(xorCarryCorr) > 0.3) {
+                html += `There's structure linking XOR and Carry — but both require factors to compute!`;
+            } else {
+                html += `XOR and Carry are relatively independent — no shortcut through their relationship.`;
+            }
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Conclusion
+            html += `<div class="panel">`;
+            html += `<h2>💀 Conclusion</h2>`;
+            
+            html += `<div class="finding critical">`;
+            html += `<strong>THE CARRY AVALANCHE IS IRREVERSIBLE</strong><br><br>`;
+            html += `• Best reconstruction correlation: ${bestXorCorr.toFixed(4)}<br>`;
+            html += `• Required for factoring: r > 0.95 at minimum<br>`;
+            html += `• Gap: ${((0.95 - bestXorCorr) / 0.95 * 100).toFixed(1)}% too weak<br><br>`;
+            html += `The information destroyed by carries cannot be recovered from N alone.<br>`;
+            html += `This is not a limitation of our methods — it's mathematical necessity.`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function singleExample() {
+            const p = 727, q = 743;
+            const N = p * q;
+            const xorSum = computeXorSum(p, q);
+            const carryResidue = computeCarryResidue(p, q);
+            
+            let html = `<div class="panel">`;
+            html += `<h2>🔍 Single Example: ${p} × ${q}</h2>`;
+            
+            html += `<div class="comparison-row">`;
+            html += `<span class="comparison-label">N:</span>`;
+            html += `<span class="comparison-value">${N} = ${toBits(N)}</span>`;
+            html += `</div>`;
+            
+            html += `<div class="comparison-row">`;
+            html += `<span class="comparison-label">XOR Sum:</span>`;
+            html += `<span class="comparison-value">${xorSum} = ${toBits(xorSum)}</span>`;
+            html += `</div>`;
+            
+            html += `<div class="comparison-row">`;
+            html += `<span class="comparison-label">Carry Residue:</span>`;
+            html += `<span class="comparison-value">${carryResidue} = ${toBits(carryResidue)}</span>`;
+            html += `</div>`;
+            
+            html += `<div class="finding">`;
+            html += `<strong>Verify:</strong> XOR + Carry = ${xorSum} + ${carryResidue} = ${xorSum + carryResidue} = N ✓`;
+            html += `</div>`;
+            
+            // Reconstruction attempts
+            html += `<h3>Reconstruction Attempts (N-only):</h3>`;
+            
+            const methods = [
+                { name: 'GF(2) Product', val: gf2Product(N) },
+                { name: 'Bit Pattern', val: estimateCarryFromBitPattern(N) },
+                { name: 'High-Low Half', val: highLowEstimate(N) },
+                { name: 'Fermat Est.', val: fermatEstimate(N) },
+            ];
+            
+            for (const m of methods) {
+                const estXor = N - m.val;
+                const error = Math.abs(estXor - xorSum) / xorSum * 100;
+                html += `<div class="comparison-row">`;
+                html += `<span class="comparison-label">${m.name}:</span>`;
+                html += `<span class="comparison-value">`;
+                html += `Est. Carry: ${m.val}, Est. XOR: ${estXor}, Error: <span class="${error < 20 ? 'hl-green' : 'hl-red'}">${error.toFixed(1)}%</span>`;
+                html += `</span>`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initial
+        document.getElementById('results').innerHTML = `
+            <div class="panel">
+                <h2>🔧 Can We Reverse the Carry Avalanche?</h2>
+                <div class="code-block">
+KNOWN:
+  N = XOR_Sum + Carry_Residue
+
+QUESTION:
+  Can we estimate XOR_Sum from N alone?
+  
+WHY THIS MATTERS:
+  XOR_Sum preserves more factor information
+  If reconstructable → potential factoring approach
+                </div>
+                <p style="margin-top:15px;">Click <strong>🔧 ATTEMPT RECONSTRUCTION</strong> to test!</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>

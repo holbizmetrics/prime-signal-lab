@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Autopsy: Where Does Factor Information Die?</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #ff0000; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        button {
+            background: #ff0000; color: #fff; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #ff4444; }
+        button.secondary { background: #444; color: #fff; }
+        button.mega { background: linear-gradient(135deg, #ff0000, #ff00ff); padding: 12px 24px; }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #ff0000; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #00aaff; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; font-weight: bold; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00ff; font-weight: bold; }
+        
+        .finding {
+            background: #1a0000; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #ff0000; font-size: 0.9em;
+        }
+        .finding.insight { border-left-color: #ffaa00; background: #1a1100; }
+        .finding.critical { border-left-color: #ff00ff; background: #1a001a; }
+        
+        .flow-diagram {
+            display: flex; align-items: center; justify-content: center;
+            flex-wrap: wrap; gap: 10px; margin: 20px 0; padding: 20px;
+            background: #000; border-radius: 8px;
+        }
+        
+        .flow-box {
+            padding: 15px 20px; border-radius: 8px; text-align: center;
+            min-width: 120px;
+        }
+        .flow-box.input { background: #003300; border: 2px solid #00ff00; }
+        .flow-box.process { background: #333300; border: 2px solid #ffff00; }
+        .flow-box.output { background: #330000; border: 2px solid #ff0000; }
+        .flow-box .value { font-size: 1.2em; font-weight: bold; }
+        .flow-box .label { font-size: 0.7em; color: #888; }
+        
+        .flow-arrow {
+            font-size: 1.5em; color: #666;
+        }
+        
+        .info-bar {
+            height: 30px; background: #222; border-radius: 4px;
+            margin: 5px 0; position: relative; overflow: hidden;
+        }
+        .info-fill {
+            height: 100%; transition: width 0.5s;
+        }
+        .info-fill.high { background: linear-gradient(90deg, #00aa00, #00ff00); }
+        .info-fill.medium { background: linear-gradient(90deg, #aaaa00, #ffff00); }
+        .info-fill.low { background: linear-gradient(90deg, #aa0000, #ff0000); }
+        .info-label {
+            position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
+            font-size: 0.8em; font-weight: bold; text-shadow: 0 0 3px #000;
+        }
+        .info-value {
+            position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        .step-card {
+            background: #0a0a15; border: 1px solid #333; border-radius: 8px;
+            padding: 15px; margin: 10px 0;
+        }
+        .step-card.critical { border-color: #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.3); }
+        .step-card h4 { color: #ffaa00; margin-bottom: 10px; }
+        
+        .code-block {
+            background: #000; padding: 10px; border-radius: 4px;
+            font-family: monospace; font-size: 0.75em; margin: 8px 0;
+            overflow-x: auto; white-space: pre;
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .autopsy-result {
+            text-align: center; padding: 30px; margin: 20px 0;
+            background: linear-gradient(135deg, #1a0000, #000);
+            border: 3px solid #ff0000; border-radius: 12px;
+        }
+        .autopsy-result .title { font-size: 1.2em; color: #ff0000; margin-bottom: 10px; }
+        .autopsy-result .finding { font-size: 1.5em; color: #fff; }
+        
+        #status { text-align: center; padding: 10px; color: #888; }
+        
+        .entropy-chart {
+            width: 100%; height: 200px; background: #000;
+            border-radius: 8px; position: relative; margin: 15px 0;
+        }
+        
+        canvas { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Information Autopsy</h1>
+    <p class="subtitle">WHERE does factor information die during multiplication?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Sample Size</label>
+            <input type="number" id="sampleSize" value="150">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="mega" onclick="runAutopsy()">🔬 PERFORM AUTOPSY</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runSingle()">🔍 Single Example</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163
+        ];
+        
+        // ============================================
+        // UTILITIES
+        // ============================================
+        
+        function popcount(n) {
+            let count = 0;
+            while (n) { count += n & 1; n >>>= 1; }
+            return count;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        function toBits(n, width = null) {
+            const bits = n.toString(2);
+            if (width) return bits.padStart(width, '0');
+            return bits;
+        }
+        
+        function correlation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        // ============================================
+        // STEP-BY-STEP MULTIPLICATION TRACE
+        // ============================================
+        
+        function traceMultiplication(p, q) {
+            const N = p * q;
+            const pBits = toBits(p);
+            const qBits = toBits(q);
+            const width = pBits.length + qBits.length;
+            
+            const stages = [];
+            
+            // STAGE 0: Input
+            stages.push({
+                name: 'Input',
+                description: 'Raw factors p and q',
+                data: { p, q, pBits, qBits },
+                extractable: { p, q, pBits, qBits, ratio: p/q, diff: Math.abs(p-q) }
+            });
+            
+            // STAGE 1: Partial Products (before any addition)
+            const partials = [];
+            for (let i = 0; i < qBits.length; i++) {
+                const bit = qBits[qBits.length - 1 - i];
+                if (bit === '1') {
+                    partials.push({
+                        shift: i,
+                        value: p << i,
+                        bits: toBits(p << i)
+                    });
+                }
+            }
+            
+            stages.push({
+                name: 'Partial Products',
+                description: 'p shifted by each 1-bit position of q',
+                data: { partials, count: partials.length },
+                extractable: {
+                    numPartials: partials.length,  // = popcount(q)
+                    shiftPositions: partials.map(p => p.shift),
+                    partialSum: partials.reduce((s, p) => s + p.value, 0)
+                }
+            });
+            
+            // STAGE 2: Partial Products XOR (no carry)
+            let xorSum = 0;
+            for (const partial of partials) {
+                xorSum ^= partial.value;
+            }
+            
+            stages.push({
+                name: 'XOR Sum (No Carry)',
+                description: 'Sum of partials without carrying',
+                data: { xorSum, bits: toBits(xorSum) },
+                extractable: {
+                    xorSum,
+                    xorBits: toBits(xorSum),
+                    xorPopcount: popcount(xorSum)
+                }
+            });
+            
+            // STAGE 3: First carry propagation
+            // Add partials two at a time, tracking carries
+            let runningSum = 0;
+            const carryEvents = [];
+            
+            for (let i = 0; i < partials.length; i++) {
+                const before = runningSum;
+                const adding = partials[i].value;
+                runningSum = before + adding;
+                
+                // Where did carries happen?
+                const xorResult = before ^ adding;
+                const andResult = before & adding;
+                const carryGenerated = andResult;
+                const carryPositions = [];
+                
+                let temp = carryGenerated;
+                let pos = 0;
+                while (temp) {
+                    if (temp & 1) carryPositions.push(pos);
+                    temp >>>= 1;
+                    pos++;
+                }
+                
+                carryEvents.push({
+                    step: i,
+                    before,
+                    adding,
+                    after: runningSum,
+                    xorPart: xorResult,
+                    carryGenerated,
+                    carryPositions,
+                    carryCount: carryPositions.length
+                });
+            }
+            
+            stages.push({
+                name: 'Carry Propagation',
+                description: 'Adding partials with carry tracking',
+                data: { carryEvents, totalCarries: carryEvents.reduce((s, e) => s + e.carryCount, 0) },
+                extractable: {
+                    totalCarries: carryEvents.reduce((s, e) => s + e.carryCount, 0),
+                    carryPattern: carryEvents.map(e => e.carryCount),
+                    maxCarryPos: Math.max(...carryEvents.flatMap(e => e.carryPositions), 0)
+                }
+            });
+            
+            // STAGE 4: Carry Chain Analysis
+            // How far do carries propagate?
+            const carryChainLengths = [];
+            for (const event of carryEvents) {
+                if (event.carryGenerated > 0) {
+                    // Simulate carry chain
+                    let carry = event.carryGenerated << 1;
+                    let target = event.xorPart;
+                    let chainLength = 0;
+                    
+                    while (carry & target) {
+                        carry = (carry & target) << 1;
+                        target = target ^ (carry >> 1);
+                        chainLength++;
+                    }
+                    carryChainLengths.push(chainLength);
+                }
+            }
+            
+            stages.push({
+                name: 'Carry Chain Lengths',
+                description: 'How far each carry propagates',
+                data: { carryChainLengths },
+                extractable: {
+                    maxChainLength: Math.max(...carryChainLengths, 0),
+                    avgChainLength: carryChainLengths.length > 0 ? 
+                        carryChainLengths.reduce((a,b) => a + b, 0) / carryChainLengths.length : 0,
+                    chainLengthVariance: variance(carryChainLengths)
+                }
+            });
+            
+            // STAGE 5: Final Result
+            stages.push({
+                name: 'Final Product N',
+                description: 'Result after all carries resolved',
+                data: { N, bits: toBits(N) },
+                extractable: {
+                    N,
+                    nBits: toBits(N),
+                    nPopcount: popcount(N),
+                    nBitLength: bitLength(N),
+                    gapBelow: N - Math.floor(Math.sqrt(N)) ** 2,
+                    gapAbove: Math.ceil(Math.sqrt(N)) ** 2 - N
+                }
+            });
+            
+            // STAGE 6: What's LOST
+            // Information that existed in inputs but not recoverable from N
+            const sqrtN = Math.sqrt(N);
+            stages.push({
+                name: 'Information Lost',
+                description: 'Factor info not recoverable from N',
+                data: {
+                    knownFromN: {
+                        product: N,
+                        bitLength: bitLength(N),
+                        popcount: popcount(N),
+                        nearestSquareGap: Math.min(N - Math.floor(sqrtN)**2, Math.ceil(sqrtN)**2 - N)
+                    },
+                    lostInfo: {
+                        factorRatio: p / q,
+                        factorDiff: Math.abs(p - q),
+                        factorBitLengths: [bitLength(p), bitLength(q)],
+                        individualFactors: [p, q]
+                    }
+                },
+                extractable: null
+            });
+            
+            return stages;
+        }
+        
+        function variance(arr) {
+            if (arr.length === 0) return 0;
+            const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+            return arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length;
+        }
+        
+        // ============================================
+        // INFORMATION CONTENT MEASUREMENT
+        // ============================================
+        
+        function measureInformationAtStage(samples, stageName, stageExtractor, targetExtractor) {
+            // Extract features at this stage for all samples
+            const features = {};
+            const targets = samples.map(([p, q]) => targetExtractor(p, q));
+            
+            // Get all extractable features at this stage
+            const firstStages = traceMultiplication(samples[0][0], samples[0][1]);
+            const stageIndex = firstStages.findIndex(s => s.name === stageName);
+            if (stageIndex < 0) return { maxCorr: 0, features: [] };
+            
+            const exampleExtractable = firstStages[stageIndex].extractable;
+            if (!exampleExtractable) return { maxCorr: 0, features: [] };
+            
+            // For each extractable feature, compute correlation with target
+            const results = [];
+            
+            for (const key of Object.keys(exampleExtractable)) {
+                const values = samples.map(([p, q]) => {
+                    const stages = traceMultiplication(p, q);
+                    const stage = stages[stageIndex];
+                    const val = stage.extractable[key];
+                    // Handle arrays by taking sum or first element
+                    if (Array.isArray(val)) return val.reduce((a, b) => a + b, 0);
+                    return val;
+                });
+                
+                const r = correlation(values, targets);
+                if (isFinite(r)) {
+                    results.push({ feature: key, r, absR: Math.abs(r) });
+                }
+            }
+            
+            results.sort((a, b) => b.absR - a.absR);
+            
+            return {
+                maxCorr: results.length > 0 ? results[0].absR : 0,
+                features: results
+            };
+        }
+        
+        // ============================================
+        // THE BIG QUESTION: At each stage, how much info remains?
+        // ============================================
+        
+        async function runAutopsy() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value) || 150;
+            const statusEl = document.getElementById('status');
+            
+            statusEl.innerHTML = 'Generating samples...';
+            await sleep(50);
+            
+            // Generate samples
+            const samples = [];
+            const balancedCount = Math.floor(sampleSize * 0.5);
+            
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            for (let i = balancedCount; i < sampleSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 35)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 35)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            // Target: balance ratio
+            const targetFn = (p, q) => (p + q) / (2 * Math.sqrt(p * q));
+            
+            // Measure information at each stage
+            const stageNames = [
+                'Input',
+                'Partial Products',
+                'XOR Sum (No Carry)',
+                'Carry Propagation',
+                'Carry Chain Lengths',
+                'Final Product N'
+            ];
+            
+            const stageResults = [];
+            
+            for (let i = 0; i < stageNames.length; i++) {
+                statusEl.innerHTML = `Analyzing stage: ${stageNames[i]}...`;
+                await sleep(50);
+                
+                const result = measureInformationAtStage(samples, stageNames[i], null, targetFn);
+                stageResults.push({
+                    name: stageNames[i],
+                    ...result
+                });
+            }
+            
+            // Additional analysis: What specific operations destroy information?
+            statusEl.innerHTML = 'Analyzing information destruction...';
+            await sleep(50);
+            
+            const destructionAnalysis = analyzeDestruction(samples, targetFn);
+            
+            statusEl.innerHTML = '';
+            renderAutopsyResults(stageResults, destructionAnalysis, sampleSize);
+        }
+        
+        function analyzeDestruction(samples, targetFn) {
+            const targets = samples.map(([p, q]) => targetFn(p, q));
+            
+            // What operations destroy info?
+            const analysis = {};
+            
+            // 1. Does the NUMBER of partials preserve info? (= popcount(q))
+            const numPartials = samples.map(([p, q]) => popcount(q));
+            analysis.numPartials = correlation(numPartials, targets);
+            
+            // 2. Does the SUM of partials preserve info? (= N)
+            // By definition this is N, so we measure N-based features
+            const nValues = samples.map(([p, q]) => p * q);
+            const nPopcounts = nValues.map(popcount);
+            analysis.nPopcount = correlation(nPopcounts, targets);
+            
+            // 3. Does XOR of partials preserve info? (no carries)
+            const xorSums = samples.map(([p, q]) => {
+                let xor = 0;
+                const qBits = q.toString(2);
+                for (let i = 0; i < qBits.length; i++) {
+                    if (qBits[qBits.length - 1 - i] === '1') {
+                        xor ^= (p << i);
+                    }
+                }
+                return xor;
+            });
+            analysis.xorSum = correlation(xorSums, targets);
+            analysis.xorPopcount = correlation(xorSums.map(popcount), targets);
+            
+            // 4. Does CARRY INFORMATION preserve info? (N XOR xorSum)
+            const carryInfo = samples.map(([p, q], i) => nValues[i] ^ xorSums[i]);
+            analysis.carryInfo = correlation(carryInfo, targets);
+            analysis.carryInfoPopcount = correlation(carryInfo.map(popcount), targets);
+            
+            // 5. The DIFFERENCE between xorSum and N
+            const diffNXor = samples.map(([p, q], i) => Math.abs(nValues[i] - xorSums[i]));
+            analysis.diffNXor = correlation(diffNXor, targets);
+            
+            // 6. Bit-by-bit analysis: which bits preserve info?
+            const bitCorrelations = [];
+            for (let bit = 0; bit < 24; bit++) {
+                const nBitValues = nValues.map(n => (n >> bit) & 1);
+                const xorBitValues = xorSums.map(x => (x >> bit) & 1);
+                
+                const rN = Math.abs(correlation(nBitValues, targets));
+                const rXor = Math.abs(correlation(xorBitValues, targets));
+                
+                bitCorrelations.push({
+                    bit,
+                    rN,
+                    rXor,
+                    rDiff: rXor - rN,
+                    destroyed: rXor > rN + 0.05
+                });
+            }
+            analysis.bitCorrelations = bitCorrelations;
+            
+            // 7. What if we could see carry positions?
+            const carryPositions = samples.map(([p, q]) => {
+                // Where do carries happen in p * q?
+                const qBits = q.toString(2);
+                let sum = 0;
+                let positions = [];
+                
+                for (let i = 0; i < qBits.length; i++) {
+                    if (qBits[qBits.length - 1 - i] === '1') {
+                        const partial = p << i;
+                        const carryGen = sum & partial;
+                        if (carryGen > 0) {
+                            // Find positions
+                            let temp = carryGen;
+                            let pos = 0;
+                            while (temp) {
+                                if (temp & 1) positions.push(pos);
+                                temp >>>= 1;
+                                pos++;
+                            }
+                        }
+                        sum += partial;
+                    }
+                }
+                return positions.length;
+            });
+            analysis.carryPositionCount = correlation(carryPositions, targets);
+            
+            return analysis;
+        }
+        
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+        
+        function renderAutopsyResults(stageResults, destruction, sampleSize) {
+            let html = '';
+            
+            // Summary
+            html += `<div class="panel">`;
+            html += `<h2>🔬 Information Autopsy Results</h2>`;
+            html += `<p style="color:#888;font-size:0.9em;">Tracking factor balance information through multiplication stages</p>`;
+            html += `</div>`;
+            
+            // Flow diagram with information levels
+            html += `<div class="panel">`;
+            html += `<h2>📊 Information Flow Through Multiplication</h2>`;
+            
+            const maxInfo = Math.max(...stageResults.map(s => s.maxCorr));
+            
+            for (const stage of stageResults) {
+                const pct = (stage.maxCorr / maxInfo * 100).toFixed(0);
+                const colorClass = stage.maxCorr > 0.6 ? 'high' : stage.maxCorr > 0.3 ? 'medium' : 'low';
+                
+                html += `<div class="info-bar">`;
+                html += `<div class="info-fill ${colorClass}" style="width: ${pct}%"></div>`;
+                html += `<span class="info-label">${stage.name}</span>`;
+                html += `<span class="info-value">r = ${stage.maxCorr.toFixed(4)}</span>`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            // THE CRITICAL FINDING
+            const inputInfo = stageResults[0].maxCorr;
+            const finalInfo = stageResults[stageResults.length - 1].maxCorr;
+            const lostPct = ((inputInfo - finalInfo) / inputInfo * 100).toFixed(1);
+            
+            html += `<div class="autopsy-result">`;
+            html += `<div class="title">☠️ CAUSE OF DEATH</div>`;
+            html += `<div class="finding">${lostPct}% of factor information destroyed</div>`;
+            html += `</div>`;
+            
+            // Detailed stage analysis
+            html += `<div class="grid-2">`;
+            
+            // Left: Stage-by-stage
+            html += `<div class="panel">`;
+            html += `<h3>📉 Stage-by-Stage Information</h3>`;
+            html += `<table>`;
+            html += `<tr><th>Stage</th><th>Best |r|</th><th>Best Feature</th></tr>`;
+            
+            for (const stage of stageResults) {
+                const best = stage.features[0];
+                const color = stage.maxCorr > 0.6 ? 'hl-green' : stage.maxCorr > 0.3 ? 'hl-yellow' : 'hl-red';
+                html += `<tr>`;
+                html += `<td>${stage.name}</td>`;
+                html += `<td class="${color}">${stage.maxCorr.toFixed(4)}</td>`;
+                html += `<td>${best?.feature || 'N/A'}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Right: Destruction analysis
+            html += `<div class="panel">`;
+            html += `<h3>🔥 What Destroys Information?</h3>`;
+            html += `<table>`;
+            html += `<tr><th>Signal Source</th><th>r with Balance</th></tr>`;
+            
+            const destructionItems = [
+                ['# of Partials (= popcount q)', destruction.numPartials],
+                ['XOR Sum (no carry)', destruction.xorSum],
+                ['XOR Popcount', destruction.xorPopcount],
+                ['Carry Info (N XOR xorSum)', destruction.carryInfo],
+                ['Carry Info Popcount', destruction.carryInfoPopcount],
+                ['|N - xorSum|', destruction.diffNXor],
+                ['Carry Position Count', destruction.carryPositionCount],
+                ['N Popcount', destruction.nPopcount]
+            ];
+            
+            destructionItems.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            for (const [name, r] of destructionItems) {
+                const color = Math.abs(r) > 0.4 ? 'hl-green' : Math.abs(r) > 0.2 ? 'hl-yellow' : 'hl-red';
+                html += `<tr><td>${name}</td><td class="${color}">${r.toFixed(4)}</td></tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end grid
+            
+            // Bit-by-bit analysis
+            html += `<div class="panel">`;
+            html += `<h2>🔢 Bit-by-Bit Information Destruction</h2>`;
+            html += `<p style="color:#888;font-size:0.85em;margin-bottom:10px;">`;
+            html += `Comparing correlation of each bit position: XOR sum (before carry) vs N (after carry)`;
+            html += `</p>`;
+            
+            html += `<table>`;
+            html += `<tr><th>Bit</th><th>|r| in XOR</th><th>|r| in N</th><th>Change</th><th>Verdict</th></tr>`;
+            
+            const significantBits = destruction.bitCorrelations.filter(b => b.rXor > 0.05 || b.rN > 0.05);
+            for (const bit of significantBits.slice(0, 15)) {
+                const change = bit.rN - bit.rXor;
+                const verdict = bit.destroyed ? '☠️ DESTROYED' : change > 0.02 ? '📈 Enhanced' : '≈ Same';
+                const changeColor = change < -0.02 ? 'hl-red' : change > 0.02 ? 'hl-green' : '';
+                
+                html += `<tr>`;
+                html += `<td>bit ${bit.bit}</td>`;
+                html += `<td>${bit.rXor.toFixed(4)}</td>`;
+                html += `<td>${bit.rN.toFixed(4)}</td>`;
+                html += `<td class="${changeColor}">${change > 0 ? '+' : ''}${change.toFixed(4)}</td>`;
+                html += `<td>${verdict}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Key findings
+            html += `<div class="panel">`;
+            html += `<h2>💀 Autopsy Findings</h2>`;
+            
+            // Finding 1: Where does most info die?
+            let maxDrop = 0;
+            let dropStage = '';
+            for (let i = 1; i < stageResults.length; i++) {
+                const drop = stageResults[i-1].maxCorr - stageResults[i].maxCorr;
+                if (drop > maxDrop) {
+                    maxDrop = drop;
+                    dropStage = `${stageResults[i-1].name} → ${stageResults[i].name}`;
+                }
+            }
+            
+            html += `<div class="finding">`;
+            html += `<strong>📍 Biggest Information Drop:</strong><br>`;
+            html += `${dropStage}<br>`;
+            html += `Lost: <span class="hl-red">${(maxDrop * 100 / inputInfo).toFixed(1)}%</span> of original information`;
+            html += `</div>`;
+            
+            // Finding 2: XOR vs N
+            const xorInfo = Math.max(Math.abs(destruction.xorSum), Math.abs(destruction.xorPopcount));
+            const nInfo = Math.abs(destruction.nPopcount);
+            
+            html += `<div class="finding insight">`;
+            html += `<strong>⚡ Carry Effect:</strong><br>`;
+            html += `Before carry (XOR): r = ${xorInfo.toFixed(4)}<br>`;
+            html += `After carry (N): r = ${nInfo.toFixed(4)}<br>`;
+            html += `<span class="${xorInfo > nInfo ? 'hl-red' : 'hl-green'}">`;
+            html += `Carry ${xorInfo > nInfo ? 'DESTROYS' : 'preserves'} `;
+            html += `${Math.abs(((xorInfo - nInfo) / xorInfo) * 100).toFixed(1)}% of signal`;
+            html += `</span>`;
+            html += `</div>`;
+            
+            // Finding 3: What SURVIVES?
+            html += `<div class="finding critical">`;
+            html += `<strong>🧬 What Survives to N:</strong><br>`;
+            const survivors = destructionItems.filter(([,r]) => Math.abs(r) > 0.15);
+            if (survivors.length > 0) {
+                for (const [name, r] of survivors.slice(0, 3)) {
+                    html += `• ${name}: r = ${r.toFixed(4)}<br>`;
+                }
+            } else {
+                html += `Almost nothing with |r| > 0.15 survives the carry avalanche.`;
+            }
+            html += `</div>`;
+            
+            // THE MECHANISM
+            html += `<div class="finding" style="background: linear-gradient(135deg, #1a0000, #1a001a); border-color: #ff0000; border-width: 3px;">`;
+            html += `<strong>🔬 THE MECHANISM OF INFORMATION DESTRUCTION:</strong><br><br>`;
+            html += `<strong>1. Partial Products:</strong> Still contains full factor info<br>`;
+            html += `   (numPartials = popcount(q) → knows about q)<br><br>`;
+            html += `<strong>2. XOR Sum:</strong> Some info preserved (no interference)<br>`;
+            html += `   (Each bit independent, no cross-contamination)<br><br>`;
+            html += `<strong>3. CARRY PROPAGATION: ☠️ THE KILLER</strong><br>`;
+            html += `   Each carry creates a cascade that mixes bits<br>`;
+            html += `   Information from position i affects position i+1, i+2, ...<br>`;
+            html += `   <span class="hl-red">Creates non-local dependencies that destroy locality</span><br><br>`;
+            html += `<strong>4. Final N:</strong> Bits are now superpositions of many partial product bits<br>`;
+            html += `   Factor structure is diffused across entire number`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function runSingle() {
+            // Show trace for a single example
+            const p = 163;
+            const q = 997;
+            const stages = traceMultiplication(p, q);
+            
+            let html = `<div class="panel">`;
+            html += `<h2>🔍 Single Trace: ${p} × ${q} = ${p * q}</h2>`;
+            
+            for (const stage of stages) {
+                html += `<div class="step-card">`;
+                html += `<h4>${stage.name}</h4>`;
+                html += `<p style="color:#888;font-size:0.85em;">${stage.description}</p>`;
+                html += `<div class="code-block">${JSON.stringify(stage.extractable || stage.data, null, 2)}</div>`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initial
+        document.getElementById('results').innerHTML = `
+            <div class="panel">
+                <h2>🔬 Information Autopsy</h2>
+                <p>This tool traces factor information through each step of multiplication:</p>
+                <div class="code-block">
+Stage 0: Input (p, q)           → 100% factor info
+Stage 1: Partial Products       → Still has factor info?
+Stage 2: XOR Sum (no carry)     → How much survives?
+Stage 3: Carry Propagation      → WHERE does info die?
+Stage 4: Final Product N        → What's left?
+                </div>
+                <p style="margin-top:15px;">Click <strong>🔬 PERFORM AUTOPSY</strong> to find out!</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>

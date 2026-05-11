@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 FRONTIER: Position-Specific Carry Extraction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0d0d1a 100%); color: #e0e0e0; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { font-size: 1.8em; margin-bottom: 10px; background: linear-gradient(135deg, #ff6b00, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.3em; margin: 20px 0 15px 0; color: #00d4ff; }
+        h3 { font-size: 1em; margin: 15px 0 10px 0; color: #ffc800; }
+        .subtitle { color: #888; margin-bottom: 20px; }
+        .panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-group label { font-size: 0.8em; color: #aaa; }
+        input, select { padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 0.95em; width: 100px; }
+        button { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0088ff); color: #000; }
+        .btn-secondary { background: linear-gradient(135deg, #ff6b00, #ff9500); color: #000; }
+        .btn-success { background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; }
+        button:hover { transform: translateY(-1px); }
+        .insight-box { background: rgba(255, 107, 0, 0.1); border: 1px solid rgba(255, 107, 0, 0.3); border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .insight-box.success { background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); }
+        .insight-box.info { background: rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); }
+        .insight-box.breakthrough { background: rgba(255, 0, 255, 0.1); border-color: rgba(255, 0, 255, 0.5); }
+        .formula { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin: 10px 0; font-size: 0.85em; overflow-x: auto; white-space: pre-wrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8em; margin: 10px 0; }
+        th, td { padding: 6px; text-align: center; border: 1px solid #333; }
+        th { background: rgba(0, 212, 255, 0.2); }
+        .good { color: #00ff88; font-weight: bold; }
+        .bad { color: #ff4444; }
+        .neutral { color: #ffc800; }
+        .excellent { color: #ff00ff; font-weight: bold; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin: 15px 0; }
+        .stat-card { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; text-align: center; }
+        .stat-value { font-size: 1.2em; font-weight: bold; color: #00d4ff; }
+        .stat-label { font-size: 0.7em; color: #888; margin-top: 4px; }
+        .log-box { font-family: monospace; font-size: 0.75em; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; }
+        .method-card { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; margin: 10px 0; border-left: 3px solid #00d4ff; }
+        .method-card.best { border-left-color: #00ff88; background: rgba(0,255,136,0.05); }
+        .method-card.breakthrough { border-left-color: #ff00ff; background: rgba(255,0,255,0.05); }
+        .heatmap { display: grid; gap: 1px; margin: 10px 0; }
+        .heatmap-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.6em; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 FRONTIER: Position-Specific Carry Extraction</h1>
+        <p class="subtitle">GRIND/GROUND methodology: Find the LOCAL patterns, not global aggregates</p>
+        
+        <div class="panel">
+            <h2>The Hypothesis</h2>
+            <div class="insight-box info">
+                <strong>GRIND observation:</strong> In 143 = 10001111, the run of zeros (positions 4,5,6) corresponds to the carry chain!
+                <br><br>
+                <strong>GROUND test:</strong> Does this pattern generalize? Can LOCAL features of N encode LOCAL carry behavior?
+                <br><br>
+                <strong>FRONTIER goal:</strong> Find extraction methods better than r ≈ 0.25 (crude aggregates)
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Sample Size</label>
+                <input type="number" id="sampleSize" value="300" min="100" max="1000">
+            </div>
+            <div class="control-group">
+                <label>Bit Range</label>
+                <select id="bitRange">
+                    <option value="8">8-bit factors</option>
+                    <option value="10" selected>10-bit factors</option>
+                    <option value="12">12-bit factors</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="runFullAnalysis()">🔬 Run FRONTIER Analysis</button>
+            <button class="btn-secondary" onclick="runSingleExample()">🔍 Single Example</button>
+        </div>
+        
+        <div id="singleExample" class="panel" style="display: none;">
+            <h2>Single Example Analysis</h2>
+            <div id="singleExampleContent"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>📊 Method Comparison: Extracting Carry Information from N</h2>
+            <div id="methodResults">
+                <p style="color: #666;">Click "Run FRONTIER Analysis" to test all extraction methods...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🏆 Best Methods Discovered</h2>
+            <div id="bestMethods">
+                <p style="color: #666;">Results will appear here...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🔬 Position-Specific Analysis</h2>
+            <p style="color: #888;">Does N[i] encode information about carry[i]?</p>
+            <div id="positionAnalysis">
+                <p style="color: #666;">Results will appear here...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>💡 Novel Feature Engineering</h2>
+            <div id="novelFeatures">
+                <p style="color: #666;">Testing unconventional extraction methods...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🎯 FRONTIER Conclusion</h2>
+            <div id="frontierConclusion">
+                <div class="insight-box">
+                    Run the analysis to discover whether better extraction is possible...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Utilities
+        function isPrime(n) {
+            if (n < 2) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(n); i += 2) if (n % i === 0) return false;
+            return true;
+        }
+        
+        function randomPrime(min, max) {
+            let p;
+            do { p = Math.floor(Math.random() * (max - min)) + min; } while (!isPrime(p));
+            return p;
+        }
+        
+        function toBinary(n, pad = 0) {
+            return n.toString(2).padStart(pad, '0');
+        }
+        
+        function popcount(n) {
+            return toBinary(n).split('').filter(b => b === '1').length;
+        }
+        
+        function correlation(x, y) {
+            const n = x.length;
+            if (n === 0) return 0;
+            const mx = x.reduce((a, b) => a + b, 0) / n;
+            const my = y.reduce((a, b) => a + b, 0) / n;
+            let num = 0, dx = 0, dy = 0;
+            for (let i = 0; i < n; i++) {
+                const xi = x[i] - mx, yi = y[i] - my;
+                num += xi * yi;
+                dx += xi * xi;
+                dy += yi * yi;
+            }
+            return dx && dy ? num / Math.sqrt(dx * dy) : 0;
+        }
+        
+        // Compute full multiplication trace
+        function computeMultiplicationTrace(p, q) {
+            if (p > q) [p, q] = [q, p];
+            const N = p * q;
+            const qBin = toBinary(q);
+            const nBin = toBinary(N);
+            const maxBits = nBin.length;
+            
+            // Get partial products
+            const partialProducts = [];
+            for (let i = 0; i < qBin.length; i++) {
+                if (qBin[qBin.length - 1 - i] === '1') {
+                    partialProducts.push({ shift: i, value: p << i });
+                }
+            }
+            
+            // Compute bit contributions and carries
+            const trace = [];
+            let carry = 0;
+            
+            for (let pos = 0; pos < maxBits; pos++) {
+                let onesCount = 0;
+                partialProducts.forEach(pp => {
+                    const ppBin = toBinary(pp.value, maxBits);
+                    if (ppBin[maxBits - 1 - pos] === '1') onesCount++;
+                });
+                
+                const totalSum = onesCount + carry;
+                const outputBit = totalSum % 2;
+                const carryOut = Math.floor(totalSum / 2);
+                
+                trace.push({
+                    position: pos,
+                    onesFromPP: onesCount,
+                    carryIn: carry,
+                    totalSum,
+                    outputBit,
+                    carryOut,
+                    nBit: parseInt(nBin[maxBits - 1 - pos] || '0')
+                });
+                
+                carry = carryOut;
+            }
+            
+            return { p, q, N, nBin, trace, partialProducts };
+        }
+        
+        // Feature extraction methods
+        const extractionMethods = {
+            // BASELINE: Crude aggregates
+            'popcount': (N) => popcount(N),
+            'bitLength': (N) => toBinary(N).length,
+            
+            // RUN-LENGTH FEATURES
+            'maxZeroRun': (N) => {
+                const matches = toBinary(N).match(/0+/g) || [];
+                return Math.max(0, ...matches.map(m => m.length));
+            },
+            'maxOneRun': (N) => {
+                const matches = toBinary(N).match(/1+/g) || [];
+                return Math.max(0, ...matches.map(m => m.length));
+            },
+            'zeroRunCount': (N) => {
+                const matches = toBinary(N).match(/0+/g) || [];
+                return matches.length;
+            },
+            'oneRunCount': (N) => {
+                const matches = toBinary(N).match(/1+/g) || [];
+                return matches.length;
+            },
+            
+            // TRANSITION FEATURES
+            'transitions': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = 1; i < bin.length; i++) {
+                    if (bin[i] !== bin[i-1]) count++;
+                }
+                return count;
+            },
+            '01_transitions': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = 1; i < bin.length; i++) {
+                    if (bin[i-1] === '0' && bin[i] === '1') count++;
+                }
+                return count;
+            },
+            '10_transitions': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = 1; i < bin.length; i++) {
+                    if (bin[i-1] === '1' && bin[i] === '0') count++;
+                }
+                return count;
+            },
+            
+            // DIFFERENTIAL FEATURES
+            'xorShift1': (N) => popcount(N ^ (N >> 1)),
+            'xorShift2': (N) => popcount(N ^ (N >> 2)),
+            'xorShift3': (N) => popcount(N ^ (N >> 3)),
+            
+            // POSITIONAL FEATURES
+            'highHalfPopcount': (N) => {
+                const bin = toBinary(N);
+                const half = Math.floor(bin.length / 2);
+                return popcount(parseInt(bin.slice(0, half), 2) || 0);
+            },
+            'lowHalfPopcount': (N) => {
+                const bin = toBinary(N);
+                const half = Math.floor(bin.length / 2);
+                return popcount(parseInt(bin.slice(half), 2) || 0);
+            },
+            'halfPopDiff': (N) => {
+                const bin = toBinary(N);
+                const half = Math.floor(bin.length / 2);
+                const high = popcount(parseInt(bin.slice(0, half), 2) || 0);
+                const low = popcount(parseInt(bin.slice(half), 2) || 0);
+                return high - low;
+            },
+            
+            // MODULAR FEATURES
+            'mod3': (N) => N % 3,
+            'mod7': (N) => N % 7,
+            'mod15': (N) => N % 15,
+            
+            // SLIDING WINDOW DENSITY
+            'windowDensityVar': (N) => {
+                const bin = toBinary(N);
+                if (bin.length < 4) return 0;
+                const densities = [];
+                for (let i = 0; i <= bin.length - 4; i++) {
+                    const window = bin.slice(i, i + 4);
+                    densities.push(window.split('').filter(b => b === '1').length / 4);
+                }
+                const mean = densities.reduce((a, b) => a + b, 0) / densities.length;
+                return densities.reduce((a, d) => a + (d - mean) ** 2, 0) / densities.length;
+            },
+            
+            // PATTERN MATCHING
+            '0000_count': (N) => (toBinary(N).match(/0000/g) || []).length,
+            '1111_count': (N) => (toBinary(N).match(/1111/g) || []).length,
+            '0101_count': (N) => (toBinary(N).match(/0101/g) || []).length,
+            '1010_count': (N) => (toBinary(N).match(/1010/g) || []).length,
+            
+            // SECOND-ORDER
+            'popcount_squared': (N) => popcount(N) ** 2,
+            'transitions_x_popcount': (N) => {
+                const bin = toBinary(N);
+                let trans = 0;
+                for (let i = 1; i < bin.length; i++) if (bin[i] !== bin[i-1]) trans++;
+                return trans * popcount(N);
+            },
+            
+            // LEADING/TRAILING
+            'leadingOnes': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = 0; i < bin.length && bin[i] === '1'; i++) count++;
+                return count;
+            },
+            'trailingOnes': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = bin.length - 1; i >= 0 && bin[i] === '1'; i--) count++;
+                return count;
+            },
+            'leadingZerosAfterMSB': (N) => {
+                const bin = toBinary(N);
+                let count = 0;
+                for (let i = 1; i < bin.length && bin[i] === '0'; i++) count++;
+                return count;
+            },
+            
+            // NOVEL: Carry chain signature
+            'zeroRunAfterOnes': (N) => {
+                // Look for pattern: 1+ followed by 0+ (carry chain signature)
+                const matches = toBinary(N).match(/1+0+/g) || [];
+                return matches.reduce((sum, m) => sum + (m.match(/0+/)[0] || '').length, 0);
+            },
+            
+            // NOVEL: Alternation breakdown
+            'longestNonAlternating': (N) => {
+                const bin = toBinary(N);
+                let maxRun = 1, currentRun = 1;
+                for (let i = 1; i < bin.length; i++) {
+                    if (bin[i] === bin[i-1]) {
+                        currentRun++;
+                        maxRun = Math.max(maxRun, currentRun);
+                    } else {
+                        currentRun = 1;
+                    }
+                }
+                return maxRun;
+            },
+            
+            // NOVEL: Weighted position sum
+            'weightedBitSum': (N) => {
+                const bin = toBinary(N);
+                let sum = 0;
+                for (let i = 0; i < bin.length; i++) {
+                    if (bin[bin.length - 1 - i] === '1') sum += i;
+                }
+                return sum;
+            },
+            
+            // NOVEL: Bit clustering coefficient
+            'bitClustering': (N) => {
+                const bin = toBinary(N);
+                let adjacent = 0, total = 0;
+                for (let i = 0; i < bin.length; i++) {
+                    if (bin[i] === '1') {
+                        total++;
+                        if (i > 0 && bin[i-1] === '1') adjacent++;
+                        if (i < bin.length - 1 && bin[i+1] === '1') adjacent++;
+                    }
+                }
+                return total > 0 ? adjacent / (2 * total) : 0;
+            }
+        };
+        
+        // Carry targets
+        const carryTargets = {
+            'totalCarries': (trace) => trace.reduce((sum, t) => sum + t.carryOut, 0),
+            'maxCarry': (trace) => Math.max(...trace.map(t => t.carryOut)),
+            'carryPositions': (trace) => trace.filter(t => t.carryOut > 0).length,
+            'carryChainLength': (trace) => {
+                let maxChain = 0, currentChain = 0;
+                for (const t of trace) {
+                    if (t.carryOut > 0) {
+                        currentChain++;
+                        maxChain = Math.max(maxChain, currentChain);
+                    } else {
+                        currentChain = 0;
+                    }
+                }
+                return maxChain;
+            },
+            'firstCarryPosition': (trace) => {
+                for (let i = 0; i < trace.length; i++) {
+                    if (trace[i].carryOut > 0) return i;
+                }
+                return trace.length;
+            },
+            'carryDensity': (trace) => trace.filter(t => t.carryOut > 0).length / trace.length
+        };
+        
+        // Factor targets
+        const factorTargets = {
+            'balance': (p, q, N) => (p + q) / (2 * Math.sqrt(N)),
+            'factorDiff': (p, q) => Math.abs(p - q),
+            'factorRatio': (p, q) => Math.max(p, q) / Math.min(p, q),
+            'pPopcount': (p) => popcount(p),
+            'qPopcount': (p, q) => popcount(q),
+            'sumPopcount': (p, q) => popcount(p) + popcount(q)
+        };
+        
+        function generateData(sampleSize, bitRange) {
+            const data = [];
+            const min = Math.pow(2, bitRange - 1);
+            const max = Math.pow(2, bitRange);
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const p = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                const q = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                const trace = computeMultiplicationTrace(Math.min(p, q), Math.max(p, q));
+                data.push(trace);
+            }
+            
+            return data;
+        }
+        
+        function runSingleExample() {
+            const trace = computeMultiplicationTrace(11, 13);
+            
+            let html = '<div class="formula">';
+            html += `p = ${trace.p} = ${toBinary(trace.p)}\n`;
+            html += `q = ${trace.q} = ${toBinary(trace.q)}\n`;
+            html += `N = ${trace.N} = ${trace.nBin}\n\n`;
+            
+            html += 'Position | N bit | PP ones | Carry In | Sum | Carry Out\n';
+            html += '---------|-------|---------|----------|-----|----------\n';
+            trace.trace.forEach(t => {
+                html += `   ${t.position.toString().padStart(2)}    |   ${t.nBit}   |    ${t.onesFromPP}    |    ${t.carryIn}     |  ${t.totalSum}  |    ${t.carryOut}\n`;
+            });
+            html += '</div>';
+            
+            // Show correlation between N bits and carry
+            html += '<h3>Position-Specific Correlation</h3>';
+            html += '<div class="insight-box info">';
+            
+            const nBits = trace.trace.map(t => t.nBit);
+            const carries = trace.trace.map(t => t.carryOut);
+            const carryIns = trace.trace.map(t => t.carryIn);
+            
+            html += `<strong>Observation:</strong><br>`;
+            html += `N bits: [${nBits.join(', ')}]<br>`;
+            html += `Carry-out: [${carries.join(', ')}]<br>`;
+            html += `Carry-in: [${carryIns.join(', ')}]<br><br>`;
+            
+            // Find zero runs in N
+            const zeroRuns = trace.nBin.match(/0+/g) || [];
+            html += `<strong>Zero runs in N:</strong> ${zeroRuns.length} runs, max length ${Math.max(0, ...zeroRuns.map(r => r.length))}<br>`;
+            
+            // Find carry chains
+            let maxCarryChain = 0, currentChain = 0;
+            trace.trace.forEach(t => {
+                if (t.carryOut > 0) { currentChain++; maxCarryChain = Math.max(maxCarryChain, currentChain); }
+                else currentChain = 0;
+            });
+            html += `<strong>Max carry chain:</strong> ${maxCarryChain}<br><br>`;
+            
+            html += `<strong>Key insight:</strong> Zero run length ≈ Carry chain length!`;
+            html += '</div>';
+            
+            document.getElementById('singleExample').style.display = 'block';
+            document.getElementById('singleExampleContent').innerHTML = html;
+        }
+        
+        function runFullAnalysis() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value);
+            const bitRange = parseInt(document.getElementById('bitRange').value);
+            
+            const data = generateData(sampleSize, bitRange);
+            
+            // Extract all features and targets
+            const features = {};
+            Object.keys(extractionMethods).forEach(name => {
+                features[name] = data.map(d => extractionMethods[name](d.N));
+            });
+            
+            const carries = {};
+            Object.keys(carryTargets).forEach(name => {
+                carries[name] = data.map(d => carryTargets[name](d.trace));
+            });
+            
+            const factors = {
+                balance: data.map(d => (d.p + d.q) / (2 * Math.sqrt(d.N))),
+                factorDiff: data.map(d => Math.abs(d.p - d.q)),
+                factorRatio: data.map(d => d.q / d.p)
+            };
+            
+            // Compute all correlations
+            const results = [];
+            
+            Object.keys(extractionMethods).forEach(featureName => {
+                const featureVals = features[featureName];
+                
+                // Correlation with carry properties
+                Object.keys(carryTargets).forEach(carryName => {
+                    const r = correlation(featureVals, carries[carryName]);
+                    results.push({
+                        feature: featureName,
+                        target: carryName,
+                        type: 'carry',
+                        r: r
+                    });
+                });
+                
+                // Correlation with factor properties
+                Object.keys(factors).forEach(factorName => {
+                    const r = correlation(featureVals, factors[factorName]);
+                    results.push({
+                        feature: featureName,
+                        target: factorName,
+                        type: 'factor',
+                        r: r
+                    });
+                });
+            });
+            
+            // Sort by absolute correlation
+            results.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+            
+            // Display method results
+            let html = '<table><tr><th>Feature (N-only)</th><th>Target</th><th>Type</th><th>Correlation</th></tr>';
+            results.slice(0, 40).forEach(res => {
+                const absR = Math.abs(res.r);
+                let cls = '';
+                if (absR > 0.7) cls = 'excellent';
+                else if (absR > 0.5) cls = 'good';
+                else if (absR > 0.3) cls = 'neutral';
+                
+                html += `<tr><td>${res.feature}</td><td>${res.target}</td><td>${res.type}</td><td class="${cls}">${res.r.toFixed(4)}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('methodResults').innerHTML = html;
+            
+            // Best methods summary
+            const carryResults = results.filter(r => r.type === 'carry');
+            const factorResults = results.filter(r => r.type === 'factor');
+            
+            const bestCarry = carryResults.reduce((best, r) => Math.abs(r.r) > Math.abs(best.r) ? r : best, {r: 0});
+            const bestFactor = factorResults.reduce((best, r) => Math.abs(r.r) > Math.abs(best.r) ? r : best, {r: 0});
+            
+            // Find best features per target
+            const bestPerTarget = {};
+            results.forEach(r => {
+                const key = r.target;
+                if (!bestPerTarget[key] || Math.abs(r.r) > Math.abs(bestPerTarget[key].r)) {
+                    bestPerTarget[key] = r;
+                }
+            });
+            
+            let bestHtml = '<div class="grid-2">';
+            
+            bestHtml += '<div class="method-card best">';
+            bestHtml += `<h3>🏆 Best N→Carry Extraction</h3>`;
+            bestHtml += `<div class="stat-value">${bestCarry.feature}</div>`;
+            bestHtml += `<div>→ ${bestCarry.target}: <strong>r = ${bestCarry.r.toFixed(4)}</strong></div>`;
+            bestHtml += '</div>';
+            
+            bestHtml += '<div class="method-card best">';
+            bestHtml += `<h3>🏆 Best N→Factor Extraction</h3>`;
+            bestHtml += `<div class="stat-value">${bestFactor.feature}</div>`;
+            bestHtml += `<div>→ ${bestFactor.target}: <strong>r = ${bestFactor.r.toFixed(4)}</strong></div>`;
+            bestHtml += '</div>';
+            
+            bestHtml += '</div>';
+            
+            bestHtml += '<h3>Best Feature Per Target</h3>';
+            bestHtml += '<table><tr><th>Target</th><th>Best Feature</th><th>Correlation</th></tr>';
+            Object.keys(bestPerTarget).forEach(target => {
+                const b = bestPerTarget[target];
+                const cls = Math.abs(b.r) > 0.5 ? 'good' : Math.abs(b.r) > 0.3 ? 'neutral' : '';
+                bestHtml += `<tr><td>${target}</td><td>${b.feature}</td><td class="${cls}">${b.r.toFixed(4)}</td></tr>`;
+            });
+            bestHtml += '</table>';
+            
+            document.getElementById('bestMethods').innerHTML = bestHtml;
+            
+            // Position-specific analysis
+            analyzePositions(data);
+            
+            // Novel features analysis
+            analyzeNovelFeatures(data, features, carries, factors);
+            
+            // Conclusion
+            generateConclusion(results, bestCarry, bestFactor);
+        }
+        
+        function analyzePositions(data) {
+            // For each bit position, correlate N[i] with carry[i]
+            const maxBits = Math.max(...data.map(d => d.nBin.length));
+            
+            const positionCorrelations = [];
+            
+            for (let pos = 0; pos < maxBits; pos++) {
+                const nBits = [];
+                const carryOuts = [];
+                const carryIns = [];
+                
+                data.forEach(d => {
+                    if (pos < d.trace.length) {
+                        nBits.push(d.trace[pos].nBit);
+                        carryOuts.push(d.trace[pos].carryOut);
+                        carryIns.push(d.trace[pos].carryIn);
+                    }
+                });
+                
+                if (nBits.length > 10) {
+                    positionCorrelations.push({
+                        position: pos,
+                        nToCarryOut: correlation(nBits, carryOuts),
+                        nToCarryIn: correlation(nBits, carryIns),
+                        samples: nBits.length
+                    });
+                }
+            }
+            
+            let html = '<table><tr><th>Position</th><th>r(N[i], CarryOut[i])</th><th>r(N[i], CarryIn[i])</th><th>Samples</th></tr>';
+            positionCorrelations.forEach(pc => {
+                const cls1 = Math.abs(pc.nToCarryOut) > 0.3 ? 'neutral' : '';
+                const cls2 = Math.abs(pc.nToCarryIn) > 0.3 ? 'neutral' : '';
+                html += `<tr><td>${pc.position}</td><td class="${cls1}">${pc.nToCarryOut.toFixed(4)}</td><td class="${cls2}">${pc.nToCarryIn.toFixed(4)}</td><td>${pc.samples}</td></tr>`;
+            });
+            html += '</table>';
+            
+            // Summary
+            const avgCarryOutCorr = positionCorrelations.reduce((sum, p) => sum + Math.abs(p.nToCarryOut), 0) / positionCorrelations.length;
+            const avgCarryInCorr = positionCorrelations.reduce((sum, p) => sum + Math.abs(p.nToCarryIn), 0) / positionCorrelations.length;
+            
+            html += `<div class="insight-box">`;
+            html += `<strong>Position-specific average |r|:</strong><br>`;
+            html += `N[i] → CarryOut[i]: ${avgCarryOutCorr.toFixed(4)}<br>`;
+            html += `N[i] → CarryIn[i]: ${avgCarryInCorr.toFixed(4)}<br><br>`;
+            
+            if (avgCarryOutCorr > 0.2 || avgCarryInCorr > 0.2) {
+                html += `<span class="good">✓ Position-specific encoding detected!</span>`;
+            } else {
+                html += `Position-specific encoding is weak. Local patterns don't directly map to local carries.`;
+            }
+            html += '</div>';
+            
+            document.getElementById('positionAnalysis').innerHTML = html;
+        }
+        
+        function analyzeNovelFeatures(data, features, carries, factors) {
+            // Test combinations of features
+            const combinations = [
+                { name: 'maxZeroRun + transitions', fn: (d) => extractionMethods.maxZeroRun(d.N) + extractionMethods.transitions(d.N) },
+                { name: 'zeroRunAfterOnes - popcount', fn: (d) => extractionMethods.zeroRunAfterOnes(d.N) - extractionMethods.popcount(d.N) },
+                { name: 'maxZeroRun × bitClustering', fn: (d) => extractionMethods.maxZeroRun(d.N) * extractionMethods.bitClustering(d.N) },
+                { name: 'xorShift1 / bitLength', fn: (d) => extractionMethods.xorShift1(d.N) / extractionMethods.bitLength(d.N) },
+                { name: 'transitions / popcount', fn: (d) => extractionMethods.transitions(d.N) / (extractionMethods.popcount(d.N) || 1) },
+                { name: 'halfPopDiff × maxZeroRun', fn: (d) => extractionMethods.halfPopDiff(d.N) * extractionMethods.maxZeroRun(d.N) },
+                { name: 'weightedBitSum / N', fn: (d) => extractionMethods.weightedBitSum(d.N) / d.N },
+                { name: 'longestNonAlternating - zeroRunCount', fn: (d) => extractionMethods.longestNonAlternating(d.N) - extractionMethods.zeroRunCount(d.N) }
+            ];
+            
+            let html = '<h3>Combined Feature Performance</h3>';
+            html += '<table><tr><th>Combined Feature</th><th>→ totalCarries</th><th>→ carryChainLength</th><th>→ balance</th></tr>';
+            
+            combinations.forEach(combo => {
+                const vals = data.map(combo.fn);
+                const rTotalCarries = correlation(vals, carries.totalCarries);
+                const rChainLength = correlation(vals, carries.carryChainLength);
+                const rBalance = correlation(vals, factors.balance);
+                
+                const cls1 = Math.abs(rTotalCarries) > 0.4 ? 'good' : Math.abs(rTotalCarries) > 0.25 ? 'neutral' : '';
+                const cls2 = Math.abs(rChainLength) > 0.4 ? 'good' : Math.abs(rChainLength) > 0.25 ? 'neutral' : '';
+                const cls3 = Math.abs(rBalance) > 0.4 ? 'good' : Math.abs(rBalance) > 0.25 ? 'neutral' : '';
+                
+                html += `<tr><td>${combo.name}</td><td class="${cls1}">${rTotalCarries.toFixed(4)}</td><td class="${cls2}">${rChainLength.toFixed(4)}</td><td class="${cls3}">${rBalance.toFixed(4)}</td></tr>`;
+            });
+            
+            html += '</table>';
+            
+            document.getElementById('novelFeatures').innerHTML = html;
+        }
+        
+        function generateConclusion(results, bestCarry, bestFactor) {
+            const carryResults = results.filter(r => r.type === 'carry');
+            const factorResults = results.filter(r => r.type === 'factor');
+            
+            const bestCarryR = Math.abs(bestCarry.r);
+            const bestFactorR = Math.abs(bestFactor.r);
+            
+            // Compare to baseline
+            const baselineCarry = Math.abs(carryResults.find(r => r.feature === 'popcount' && r.target === 'totalCarries')?.r || 0);
+            const improvementCarry = ((bestCarryR - baselineCarry) / baselineCarry * 100).toFixed(1);
+            
+            let html = '';
+            
+            if (bestCarryR > 0.5) {
+                html += '<div class="insight-box breakthrough">';
+                html += `<h3 style="color: #ff00ff;">🎯 BREAKTHROUGH: Strong Extraction Found!</h3><br>`;
+                html += `<strong>Best N→Carry:</strong> ${bestCarry.feature} → ${bestCarry.target}<br>`;
+                html += `<strong>Correlation:</strong> r = ${bestCarry.r.toFixed(4)}<br>`;
+                html += `<strong>vs Baseline (popcount):</strong> +${improvementCarry}% improvement<br><br>`;
+                html += `<strong>Implication:</strong> N DOES encode carry structure in extractable form!`;
+            } else if (bestCarryR > 0.35) {
+                html += '<div class="insight-box success">';
+                html += `<h3 style="color: #00ff88;">✓ Moderate Extraction Possible</h3><br>`;
+                html += `<strong>Best N→Carry:</strong> ${bestCarry.feature} (r = ${bestCarry.r.toFixed(4)})<br>`;
+                html += `Better than crude popcount, but not strong enough to crack the problem.`;
+            } else {
+                html += '<div class="insight-box">';
+                html += `<h3>Limited Extraction</h3><br>`;
+                html += `<strong>Best N→Carry:</strong> ${bestCarry.feature} (r = ${bestCarry.r.toFixed(4)})<br>`;
+                html += `The carry transformation remains largely opaque.`;
+            }
+            
+            html += '<br><br>';
+            html += `<strong>Best N→Factor (direct):</strong> ${bestFactor.feature} → ${bestFactor.target} (r = ${bestFactor.r.toFixed(4)})<br><br>`;
+            
+            // The key finding
+            html += '<strong>Key Finding:</strong><br>';
+            if (bestCarryR > bestFactorR) {
+                html += `The N→Carry path (r=${bestCarryR.toFixed(3)}) is STRONGER than N→Factor directly (r=${bestFactorR.toFixed(3)}).<br>`;
+                html += `This suggests: understanding carries IS a viable path to understanding factors!`;
+            } else {
+                html += `The N→Factor path (r=${bestFactorR.toFixed(3)}) remains stronger than N→Carry (r=${bestCarryR.toFixed(3)}).<br>`;
+                html += `Carry structure doesn't provide additional leverage beyond direct N analysis.`;
+            }
+            
+            html += '</div>';
+            
+            // Research direction
+            html += '<div class="insight-box info">';
+            html += '<h3>FRONTIER Status</h3><br>';
+            html += `<strong>Question:</strong> Is the r ≈ 0.6 ceiling our limitation or fundamental?<br><br>`;
+            html += `<strong>Finding:</strong> Best extraction method achieves r = ${Math.max(bestCarryR, bestFactorR).toFixed(3)}<br>`;
+            
+            if (Math.max(bestCarryR, bestFactorR) > 0.6) {
+                html += `<span class="good">✓ We EXCEEDED the previous ceiling!</span> Better methods exist.`;
+            } else if (Math.max(bestCarryR, bestFactorR) > 0.5) {
+                html += `We're approaching the ceiling. Some structure is extractable.`;
+            } else {
+                html += `The ceiling appears robust. Simple features don't capture the transformation.`;
+            }
+            
+            html += '<br><br><strong>Next frontier:</strong><br>';
+            html += '• Machine learning on bit patterns?<br>';
+            html += '• Information-theoretic bounds on extraction?<br>';
+            html += '• Multi-scale pattern analysis?<br>';
+            html += '</div>';
+            
+            document.getElementById('frontierConclusion').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

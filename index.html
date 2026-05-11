@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔬 Prime Signal Lab</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a12;
+    color: #e0e0e8;
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header { margin-bottom: 40px; }
+  h1 {
+    font-size: 2.4rem;
+    background: linear-gradient(90deg, #4dd0e1, #ba68c8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #9090a0; font-size: 1rem; max-width: 800px; line-height: 1.5; }
+  .core-q {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: rgba(77, 208, 225, 0.08);
+    border-left: 3px solid #4dd0e1;
+    border-radius: 4px;
+    font-style: italic;
+    color: #c8c8d8;
+  }
+  h2 {
+    margin: 48px 0 16px;
+    font-size: 1.3rem;
+    color: #4dd0e1;
+    border-bottom: 1px solid rgba(77, 208, 225, 0.2);
+    padding-bottom: 8px;
+  }
+  .featured {
+    margin-top: 40px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(77, 208, 225, 0.06), rgba(186, 104, 200, 0.06));
+    border: 1px solid rgba(186, 104, 200, 0.3);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  @media (max-width: 800px) {
+    .featured { grid-template-columns: 1fr; }
+  }
+  .featured img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #2a2a3a;
+    display: block;
+  }
+  .featured h3 { font-size: 1.5rem; margin-bottom: 8px; color: #ba68c8; }
+  .featured-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(186, 104, 200, 0.2);
+    color: #ba68c8;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .featured-modes {
+    font-size: 0.85rem;
+    color: #9090a0;
+    margin: 12px 0 16px;
+    line-height: 1.5;
+  }
+  .featured .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #ba68c8;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .featured .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(186, 104, 200, 0.4);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: #4dd0e1;
+    box-shadow: 0 4px 16px rgba(77, 208, 225, 0.15);
+  }
+  .card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    object-position: top;
+    border-bottom: 1px solid #2a2a3a;
+    display: block;
+  }
+  .card-body { padding: 12px 14px; }
+  .card-title {
+    font-size: 0.95rem;
+    color: #e0e0e8;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .card-desc {
+    font-size: 0.78rem;
+    color: #9090a0;
+    line-height: 1.4;
+  }
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid #2a2a3a;
+    color: #707080;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  footer a { color: #4dd0e1; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>🔬 Prime Signal Lab</h1>
+    <p class="subtitle">Browser-based tools investigating the bit-level information structure of integer multiplication, factorization signals, and carry propagation.</p>
+    <div class="core-q">When integers are multiplied, where does the factor information go — and can we recover any of it?</div>
+  </header>
+
+  <section class="featured">
+    <a href="carry-research-lab.html"><img src="screenshots/carry-research-lab.png" alt="Carry Research Lab"></a>
+    <div>
+      <span class="featured-tag">⭐ Featured · Unified Platform</span>
+      <h3>Carry Research Lab</h3>
+      <p>Six investigative modes in one app — the synthesis of all carry analysis work.</p>
+      <p class="featured-modes">Single Multiplication Trace · Feature Extraction · Carry Sequence Reconstruction · Scaling Analysis · Feature Ablation · Research Findings</p>
+      <a class="btn" href="carry-research-lab.html">Open the lab →</a>
+    </div>
+  </section>
+
+  <h2>Carry analysis</h2>
+  <div class="grid">
+    <a class="card" href="carry-avalanche.html"><img src="screenshots/carry-avalanche.png" alt=""><div class="card-body"><div class="card-title">🌊 Carry Avalanche</div><div class="card-desc">Watch information get destroyed bit by bit.</div></div></a>
+    <a class="card" href="carry-avalanche-lab.html"><img src="screenshots/carry-avalanche-lab.png" alt=""><div class="card-body"><div class="card-title">🔬 Carry Avalanche Lab</div><div class="card-desc">Extended lab — Factor-Dependent vs N-Only signals, Dependency Map.</div></div></a>
+    <a class="card" href="carry-reconstruction.html"><img src="screenshots/carry-reconstruction.png" alt=""><div class="card-body"><div class="card-title">🔧 Carry Reconstruction Lab</div><div class="card-desc">Can we REVERSE the information destruction?</div></div></a>
+    <a class="card" href="carry-reconstruction-1.html"><img src="screenshots/carry-reconstruction-1.png" alt=""><div class="card-body"><div class="card-title">🎯 GRIND: Carry Reconstruction</div><div class="card-desc">ML predictor + per-position accuracy + info-theoretic ceiling.</div></div></a>
+    <a class="card" href="carry-transformation-analysis.html"><img src="screenshots/carry-transformation-analysis.png" alt=""><div class="card-body"><div class="card-title">🔍 Transformation Analysis</div><div class="card-desc">Is information destroyed or transformed? Recoverability test.</div></div></a>
+  </div>
+
+  <h2>Signal extraction</h2>
+  <div class="grid">
+    <a class="card" href="fusion-analysis.html"><img src="screenshots/fusion-analysis.png" alt=""><div class="card-body"><div class="card-title">⚡ Fusion Analysis</div><div class="card-desc">If one signal gives 92%, what do many give? Multi-signal carry extraction.</div></div></a>
+    <a class="card" href="information-autopsy.html"><img src="screenshots/information-autopsy.png" alt=""><div class="card-body"><div class="card-title">🔬 Information Autopsy</div><div class="card-desc">Where does factor information die?</div></div></a>
+    <a class="card" href="ultimate-signal-hunter.html"><img src="screenshots/ultimate-signal-hunter.png" alt=""><div class="card-body"><div class="card-title">🎯 Ultimate Signal Hunter</div><div class="card-desc">Aggressive signal search across feature space.</div></div></a>
+    <a class="card" href="n-only-extractor.html"><img src="screenshots/n-only-extractor.png" alt=""><div class="card-body"><div class="card-title">🧮 N-Only Extractor</div><div class="card-desc">Extract features that depend only on N — no factor leakage allowed.</div></div></a>
+    <a class="card" href="signal-combinator.html"><img src="screenshots/signal-combinator.png" alt=""><div class="card-body"><div class="card-title">🔗 Signal Combinator</div><div class="card-desc">Combine orthogonal signals — ensemble methods.</div></div></a>
+  </div>
+
+  <h2>Operations comparison</h2>
+  <div class="grid">
+    <a class="card" href="addition-vs-multiplication.html"><img src="screenshots/addition-vs-multiplication.png" alt=""><div class="card-body"><div class="card-title">➕✖️ Addition vs Multiplication</div><div class="card-desc">Why is multiplication structurally different from addition?</div></div></a>
+    <a class="card" href="boolean-multiplication-explorer.html"><img src="screenshots/boolean-multiplication-explorer.png" alt=""><div class="card-body"><div class="card-title">🔲 Boolean Multiplication</div><div class="card-desc">GF(2) multiplication explored. popcount features, gf2Product.</div></div></a>
+  </div>
+
+  <h2>Scaling / frontier</h2>
+  <div class="grid">
+    <a class="card" href="scaling-analysis.html"><img src="screenshots/scaling-analysis.png" alt=""><div class="card-body"><div class="card-title">📈 Scaling Analysis</div><div class="card-desc">Does the signal survive at larger N?</div></div></a>
+    <a class="card" href="frontier-extraction.html"><img src="screenshots/frontier-extraction.png" alt=""><div class="card-body"><div class="card-title">🚀 Frontier Extraction</div><div class="card-desc">Push extractor performance to the limit.</div></div></a>
+    <a class="card" href="ablation-study.html"><img src="screenshots/ablation-study.png" alt=""><div class="card-body"><div class="card-title">🧪 Ablation Study</div><div class="card-desc">Which features carry the weight?</div></div></a>
+  </div>
+
+  <h2>Coordinate systems</h2>
+  <div class="grid">
+    <a class="card" href="coordinate-system.html"><img src="screenshots/coordinate-system.png" alt=""><div class="card-body"><div class="card-title">📐 Coordinate System</div><div class="card-desc">Alternative coordinate representations for primes / semiprimes.</div></div></a>
+  </div>
+
+  <h2>Factoring tools</h2>
+  <div class="grid">
+    <a class="card" href="multi-algorithm-explorer.html"><img src="screenshots/multi-algorithm-explorer.png" alt=""><div class="card-body"><div class="card-title">🔢 Multi-Algorithm Explorer</div><div class="card-desc">Compare factoring algorithms side-by-side.</div></div></a>
+    <a class="card" href="semiprime-observatory.html"><img src="screenshots/semiprime-observatory.png" alt=""><div class="card-body"><div class="card-title">🔭 Semiprime Observatory</div><div class="card-desc">The largest tool — broad investigation of semiprime structure.</div></div></a>
+    <a class="card" href="padic-explorer.html"><img src="screenshots/padic-explorer.png" alt=""><div class="card-body"><div class="card-title">🌀 p-adic Explorer</div><div class="card-desc">p-adic representation explorer.</div></div></a>
+  </div>
+
+  <footer>
+    <p><strong>Related:</strong> <a href="https://github.com/holbizmetrics/prime-explorer">Prime Explorer</a> (3D geometric / EC angle) · <a href="https://github.com/holbizmetrics/researches">Researches</a> (broader portfolio) · <a href="https://github.com/holbizmetrics/Prometheus-Crystal-Lab">Prometheus-Crystal-Lab</a> (research architecture)</p>
+    <p style="margin-top: 12px;">Origin: Prometheus-Crystal-Lab research thread on bit-level factorization signals (2026-01 – 2026-04). Tools consolidated from 44 file → 25 unique → 20 in-scope.</p>
+  </footer>
+
+</div>
+</body>
+</html>

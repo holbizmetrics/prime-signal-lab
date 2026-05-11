@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Combinator - Multiplication Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #ff00ff; margin-bottom: 10px; font-size: 1.5em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        select {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; font-family: inherit;
+        }
+        
+        button {
+            background: #ff00ff; color: #fff; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+            font-size: 0.85em;
+        }
+        button:hover { background: #ff44ff; }
+        button.secondary { background: #444; }
+        button.secondary:hover { background: #666; }
+        button.mega { background: linear-gradient(135deg, #ff00ff, #00ffff); font-size: 1em; padding: 12px 24px; }
+        button.mega:hover { background: linear-gradient(135deg, #ff44ff, #44ffff); }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #ff00ff; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #00aaff; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; font-size: 0.85em; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00ff; font-weight: bold; }
+        .hl-cyan { color: #00ffff; font-weight: bold; }
+        
+        .finding {
+            background: #001833; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #00aaff; font-size: 0.9em;
+        }
+        .finding.positive { border-left-color: #00ff88; background: #001a11; }
+        .finding.negative { border-left-color: #ff4444; background: #1a0011; }
+        .finding.discovery { border-left-color: #ff00ff; background: #1a0018; }
+        .finding.mega { 
+            border-left-color: #00ffff; background: linear-gradient(90deg, #001a1a, #111);
+            border-width: 4px;
+        }
+        
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+        .stat-box {
+            background: #1a1a2e; padding: 8px 12px; border-radius: 4px;
+            text-align: center; min-width: 80px;
+        }
+        .stat-value { font-size: 1.2em; font-weight: bold; color: #00ffaa; }
+        .stat-label { font-size: 0.65em; color: #888; }
+        
+        .progress-bar {
+            height: 24px; background: #222; border-radius: 4px;
+            margin: 10px 0; overflow: hidden; position: relative;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #ff00ff, #00ffff);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        .combo-card {
+            background: #0a0a18; border: 1px solid #333; border-radius: 8px;
+            padding: 12px; margin: 8px 0;
+        }
+        .combo-card.winner {
+            border-color: #00ffff; 
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            background: linear-gradient(135deg, #0a1a1a, #0a0a18);
+        }
+        
+        .formula {
+            font-family: monospace; background: #000; padding: 8px 12px;
+            border-radius: 4px; margin: 5px 0; font-size: 0.85em;
+            border-left: 2px solid #ff00ff;
+        }
+        
+        .correlation-mega {
+            font-size: 2em; font-weight: bold; text-align: center;
+            padding: 20px; margin: 10px 0;
+            background: linear-gradient(135deg, #1a001a, #001a1a);
+            border-radius: 8px;
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        #status { text-align: center; padding: 10px; color: #888; font-style: italic; }
+        
+        .improvement-badge {
+            display: inline-block; padding: 4px 8px; border-radius: 4px;
+            font-weight: bold; font-size: 0.85em;
+        }
+        .improvement-badge.huge { background: #004400; color: #00ff00; }
+        .improvement-badge.good { background: #444400; color: #ffff00; }
+        .improvement-badge.small { background: #444; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>🔮 Signal Combinator</h1>
+    <p class="subtitle">Do multiple signals ADD UP for stronger prediction?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Sample Size</label>
+            <input type="number" id="sampleSize" value="200">
+        </div>
+        <div class="control-group">
+            <label>Max Combo Size</label>
+            <select id="maxCombo">
+                <option value="2">2 signals</option>
+                <option value="3" selected>3 signals</option>
+                <option value="4">4 signals</option>
+                <option value="5">5 signals</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="mega" onclick="runFullAnalysis()">🔮 COMBINE SIGNALS</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="runQuickTest()">⚡ Quick (50)</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163,
+            1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249
+        ];
+        
+        // ============================================
+        // FEATURE EXTRACTION
+        // ============================================
+        
+        function toDigits(n, base) {
+            if (n === 0) return [0];
+            const digits = [];
+            while (n > 0) { digits.push(n % base); n = Math.floor(n / base); }
+            return digits;
+        }
+        
+        function popcount(n) {
+            let count = 0;
+            while (n) { count += n & 1; n >>>= 1; }
+            return count;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        // Schoolbook multiplication
+        function schoolbook(p, q, base) {
+            const pDigits = toDigits(p, base);
+            const qDigits = toDigits(q, base);
+            const width = pDigits.length + qDigits.length;
+            
+            const partials = [];
+            for (let j = 0; j < qDigits.length; j++) {
+                const row = new Array(width).fill(0);
+                let carry = 0;
+                for (let i = 0; i < pDigits.length; i++) {
+                    const prod = pDigits[i] * qDigits[j] + carry;
+                    row[i + j] = prod % base;
+                    carry = Math.floor(prod / base);
+                }
+                if (carry) row[pDigits.length + j] = carry;
+                partials.push(row);
+            }
+            
+            let carry = 0;
+            let totalCarry = 0;
+            for (let col = 0; col < width; col++) {
+                let sum = carry;
+                for (const row of partials) sum += row[col];
+                carry = Math.floor(sum / base);
+                totalCarry += carry;
+            }
+            
+            return totalCarry;
+        }
+        
+        // Lattice multiplication
+        function lattice(p, q, base) {
+            const pDigits = toDigits(p, base).reverse();
+            const qDigits = toDigits(q, base).reverse();
+            const rows = qDigits.length, cols = pDigits.length;
+            
+            const grid = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    const prod = pDigits[c] * qDigits[r];
+                    row.push({ upper: Math.floor(prod / base), lower: prod % base });
+                }
+                grid.push(row);
+            }
+            
+            const numDiagonals = rows + cols - 1;
+            let carry = 0;
+            let totalCarry = 0;
+            
+            for (let d = numDiagonals - 1; d >= 0; d--) {
+                let sum = carry;
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (r + c === d) sum += grid[r][c].lower;
+                        if (r + c + 1 === d) sum += grid[r][c].upper;
+                    }
+                }
+                carry = Math.floor(sum / base);
+                totalCarry += carry;
+            }
+            
+            return totalCarry;
+        }
+        
+        // CSA pairs count
+        function csaPairs(p, q) {
+            const qBits = q.toString(2);
+            const numPartials = popcount(q);
+            
+            let numbers = numPartials;
+            let pairs = 0;
+            while (numbers > 2) {
+                const newCount = Math.floor(numbers / 3) * 2 + (numbers % 3);
+                pairs += Math.floor(numbers / 3);
+                numbers = newCount;
+            }
+            return pairs;
+        }
+        
+        // XOR/GF2 analysis
+        function gf2Analysis(p, q) {
+            const N = p * q;
+            let gf2Product = 0;
+            let temp = q;
+            let shift = 0;
+            while (temp) {
+                if (temp & 1) gf2Product ^= (p << shift);
+                temp >>>= 1;
+                shift++;
+            }
+            const diff = N ^ gf2Product;
+            return {
+                diffBits: popcount(diff),
+                diffRatio: popcount(diff) / bitLength(N)
+            };
+        }
+        
+        // Booth operations
+        function boothOps(q) {
+            const qBits = q.toString(2) + '0';
+            let ops = 0;
+            for (let i = qBits.length - 1; i > 0; i--) {
+                if (qBits[i] !== qBits[i-1]) ops++;
+            }
+            return ops;
+        }
+        
+        // Hamming analysis
+        function hammingAnalysis(p, q) {
+            const N = p * q;
+            const hwP = popcount(p);
+            const hwQ = popcount(q);
+            const hwN = popcount(N);
+            return {
+                hwRatio: hwN / (hwP * hwQ || 1),
+                hwDensityDiff: Math.abs(hwP/bitLength(p) - hwQ/bitLength(q)),
+                hwN: hwN
+            };
+        }
+        
+        // Bit overlap
+        function bitOverlap(p, q) {
+            const andBits = popcount(p & q);
+            return andBits / Math.min(popcount(p), popcount(q) || 1);
+        }
+        
+        // Full feature extraction
+        function extractFeatures(p, q) {
+            const N = p * q;
+            const gf2 = gf2Analysis(p, q);
+            const hw = hammingAnalysis(p, q);
+            
+            return {
+                // Decimal methods
+                'School_B10': schoolbook(p, q, 10),
+                'Lattice_B10': lattice(p, q, 10),
+                'School_B2': schoolbook(p, q, 2),
+                'Lattice_B2': lattice(p, q, 2),
+                'School_B16': schoolbook(p, q, 16),
+                'Lattice_B16': lattice(p, q, 16),
+                'School_B7': schoolbook(p, q, 7),
+                'Lattice_B7': lattice(p, q, 7),
+                'School_B12': schoolbook(p, q, 12),
+                'Lattice_B12': lattice(p, q, 12),
+                
+                // Boolean methods
+                'CSA_Pairs': csaPairs(p, q),
+                'GF2_DiffBits': gf2.diffBits,
+                'GF2_DiffRatio': gf2.diffRatio,
+                'Booth_Ops': boothOps(q),
+                'HW_Ratio': hw.hwRatio,
+                'HW_DensityDiff': hw.hwDensityDiff,
+                'HW_N': hw.hwN,
+                'Bit_Overlap': bitOverlap(p, q),
+                'XOR_Popcount': popcount(p ^ q),
+                'AND_Popcount': popcount(p & q),
+                'OR_Popcount': popcount(p | q),
+                
+                // Derived
+                'P_Popcount': popcount(p),
+                'Q_Popcount': popcount(q),
+                'P_BitLen': bitLength(p),
+                'Q_BitLen': bitLength(q),
+                'N_BitLen': bitLength(N)
+            };
+        }
+        
+        // ============================================
+        // STATISTICS
+        // ============================================
+        
+        function mean(arr) {
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+        
+        function std(arr) {
+            const m = mean(arr);
+            return Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / arr.length);
+        }
+        
+        function normalize(arr) {
+            const m = mean(arr);
+            const s = std(arr) || 1;
+            return arr.map(x => (x - m) / s);
+        }
+        
+        function correlation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = mean(arr1);
+            const mean2 = mean(arr2);
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        // Multiple regression (least squares)
+        function multipleRegression(X, y) {
+            // X: array of feature arrays, y: target
+            // Returns coefficients and R²
+            const n = y.length;
+            const k = X.length;
+            
+            // Normalize features
+            const Xnorm = X.map(normalize);
+            const ynorm = normalize(y);
+            
+            // Simple: use correlation-weighted sum
+            // (Approximate multiple regression)
+            const corrs = Xnorm.map(x => correlation(x, ynorm));
+            const absCorrs = corrs.map(Math.abs);
+            const totalCorr = absCorrs.reduce((a, b) => a + b, 0) || 1;
+            const weights = corrs.map((c, i) => c / totalCorr);
+            
+            // Compute combined predictor
+            const combined = new Array(n).fill(0);
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < k; j++) {
+                    combined[i] += weights[j] * Xnorm[j][i];
+                }
+            }
+            
+            // R² of combined
+            const r = correlation(combined, ynorm);
+            
+            return {
+                weights,
+                r,
+                r2: r * r
+            };
+        }
+        
+        // ============================================
+        // COMBINATION METHODS
+        // ============================================
+        
+        function combineSignals(featureArrays, method, ratios) {
+            const n = ratios.length;
+            const result = new Array(n).fill(0);
+            
+            // Normalize all features
+            const normalized = featureArrays.map(normalize);
+            
+            switch (method) {
+                case 'sum':
+                    // Simple sum
+                    for (let i = 0; i < n; i++) {
+                        for (const feat of normalized) {
+                            result[i] += feat[i];
+                        }
+                    }
+                    break;
+                    
+                case 'weighted':
+                    // Weight by individual correlation
+                    const corrs = normalized.map(f => Math.abs(correlation(f, ratios)));
+                    const totalCorr = corrs.reduce((a, b) => a + b, 0) || 1;
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < normalized.length; j++) {
+                            result[i] += (corrs[j] / totalCorr) * normalized[j][i];
+                        }
+                    }
+                    break;
+                    
+                case 'product':
+                    // Product (for multiplicative relationships)
+                    for (let i = 0; i < n; i++) {
+                        result[i] = 1;
+                        for (const feat of normalized) {
+                            result[i] *= (feat[i] + 3); // Shift to avoid negatives
+                        }
+                    }
+                    break;
+                    
+                case 'max':
+                    // Take max signal
+                    for (let i = 0; i < n; i++) {
+                        result[i] = Math.max(...normalized.map(f => Math.abs(f[i])));
+                    }
+                    break;
+                    
+                case 'regression':
+                    // Multiple regression
+                    const reg = multipleRegression(featureArrays, ratios);
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < featureArrays.length; j++) {
+                            result[i] += reg.weights[j] * normalized[j][i];
+                        }
+                    }
+                    break;
+            }
+            
+            return result;
+        }
+        
+        // ============================================
+        // MAIN ANALYSIS
+        // ============================================
+        
+        async function runAnalysis(sampleSize, maxComboSize) {
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+            
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 0%"></div><div class="progress-text">Generating samples...</div></div>`;
+            await new Promise(r => setTimeout(r, 50));
+            
+            // Generate samples
+            const samples = [];
+            const balancedCount = Math.floor(sampleSize * 0.5);
+            
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            for (let i = balancedCount; i < sampleSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 30)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 30)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            // Extract features
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 20%"></div><div class="progress-text">Extracting features...</div></div>`;
+            await new Promise(r => setTimeout(r, 50));
+            
+            const allFeatures = [];
+            const ratios = [];
+            
+            for (const [p, q] of samples) {
+                const N = p * q;
+                const ratio = (p + q) / (2 * Math.sqrt(N));
+                ratios.push(ratio);
+                allFeatures.push(extractFeatures(p, q));
+            }
+            
+            // Organize features by name
+            const featureNames = Object.keys(allFeatures[0]);
+            const featureArrays = {};
+            for (const name of featureNames) {
+                featureArrays[name] = allFeatures.map(f => f[name]);
+            }
+            
+            // Compute individual correlations
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 40%"></div><div class="progress-text">Computing correlations...</div></div>`;
+            await new Promise(r => setTimeout(r, 50));
+            
+            const individualCorrs = {};
+            for (const name of featureNames) {
+                const corr = correlation(featureArrays[name], ratios);
+                if (isFinite(corr)) {
+                    individualCorrs[name] = corr;
+                }
+            }
+            
+            // Sort by absolute correlation
+            const sortedFeatures = Object.entries(individualCorrs)
+                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            // Best single signal
+            const bestSingle = sortedFeatures[0];
+            
+            // Test combinations
+            statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 60%"></div><div class="progress-text">Testing combinations...</div></div>`;
+            await new Promise(r => setTimeout(r, 50));
+            
+            const combinations = [];
+            const topFeatures = sortedFeatures.slice(0, 12).map(([name]) => name);
+            
+            // Test all pairs
+            for (let i = 0; i < topFeatures.length; i++) {
+                for (let j = i + 1; j < topFeatures.length; j++) {
+                    const names = [topFeatures[i], topFeatures[j]];
+                    const arrays = names.map(n => featureArrays[n]);
+                    
+                    for (const method of ['sum', 'weighted', 'regression']) {
+                        const combined = combineSignals(arrays, method, ratios);
+                        const r = correlation(combined, ratios);
+                        
+                        if (isFinite(r)) {
+                            combinations.push({
+                                features: names,
+                                method,
+                                r,
+                                absR: Math.abs(r),
+                                size: 2
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Test triples if requested
+            if (maxComboSize >= 3) {
+                statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 75%"></div><div class="progress-text">Testing triples...</div></div>`;
+                await new Promise(r => setTimeout(r, 50));
+                
+                const topForTriples = topFeatures.slice(0, 8);
+                for (let i = 0; i < topForTriples.length; i++) {
+                    for (let j = i + 1; j < topForTriples.length; j++) {
+                        for (let k = j + 1; k < topForTriples.length; k++) {
+                            const names = [topForTriples[i], topForTriples[j], topForTriples[k]];
+                            const arrays = names.map(n => featureArrays[n]);
+                            
+                            for (const method of ['weighted', 'regression']) {
+                                const combined = combineSignals(arrays, method, ratios);
+                                const r = correlation(combined, ratios);
+                                
+                                if (isFinite(r)) {
+                                    combinations.push({
+                                        features: names,
+                                        method,
+                                        r,
+                                        absR: Math.abs(r),
+                                        size: 3
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Test quads if requested
+            if (maxComboSize >= 4) {
+                statusEl.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width: 85%"></div><div class="progress-text">Testing quads...</div></div>`;
+                await new Promise(r => setTimeout(r, 50));
+                
+                const topForQuads = topFeatures.slice(0, 6);
+                for (let i = 0; i < topForQuads.length; i++) {
+                    for (let j = i + 1; j < topForQuads.length; j++) {
+                        for (let k = j + 1; k < topForQuads.length; k++) {
+                            for (let l = k + 1; l < topForQuads.length; l++) {
+                                const names = [topForQuads[i], topForQuads[j], topForQuads[k], topForQuads[l]];
+                                const arrays = names.map(n => featureArrays[n]);
+                                
+                                const combined = combineSignals(arrays, 'regression', ratios);
+                                const r = correlation(combined, ratios);
+                                
+                                if (isFinite(r)) {
+                                    combinations.push({
+                                        features: names,
+                                        method: 'regression',
+                                        r,
+                                        absR: Math.abs(r),
+                                        size: 4
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Sort combinations
+            combinations.sort((a, b) => b.absR - a.absR);
+            
+            statusEl.innerHTML = '';
+            renderResults(sortedFeatures, combinations, bestSingle, sampleSize);
+        }
+        
+        function renderResults(sortedFeatures, combinations, bestSingle, sampleSize) {
+            let html = '';
+            
+            const bestCombo = combinations[0];
+            const improvement = bestCombo ? ((bestCombo.absR / Math.abs(bestSingle[1])) - 1) * 100 : 0;
+            
+            // Hero section
+            html += `<div class="panel">`;
+            html += `<h2>🔮 Signal Combination Results</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${sampleSize}</div><div class="stat-label">Samples</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${sortedFeatures.length}</div><div class="stat-label">Features</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${combinations.length}</div><div class="stat-label">Combos Tested</div></div>`;
+            html += `</div>`;
+            
+            // The big reveal
+            html += `<div class="correlation-mega">`;
+            html += `Best Single: <span class="hl-yellow">|r| = ${Math.abs(bestSingle[1]).toFixed(4)}</span><br>`;
+            html += `Best Combo: <span class="hl-cyan">|r| = ${bestCombo.absR.toFixed(4)}</span><br>`;
+            const badgeClass = improvement > 20 ? 'huge' : improvement > 10 ? 'good' : 'small';
+            html += `<span class="improvement-badge ${badgeClass}">${improvement > 0 ? '+' : ''}${improvement.toFixed(1)}% improvement</span>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Winner card
+            html += `<div class="combo-card winner">`;
+            html += `<h3 style="color: #00ffff; margin-bottom: 10px;">🏆 WINNING COMBINATION</h3>`;
+            html += `<div class="formula">`;
+            html += `${bestCombo.features.join(' + ')}<br>`;
+            html += `Method: ${bestCombo.method} | Size: ${bestCombo.size}`;
+            html += `</div>`;
+            html += `<div style="font-size: 1.5em; text-align: center; margin: 10px 0;">`;
+            html += `<span class="hl-cyan">r = ${bestCombo.r.toFixed(4)}</span> &nbsp; `;
+            html += `<span class="hl-green">|r| = ${bestCombo.absR.toFixed(4)}</span>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Analysis
+            html += `<div class="grid-2">`;
+            
+            // Top individual signals
+            html += `<div class="panel">`;
+            html += `<h3>📊 Top Individual Signals</h3>`;
+            html += `<table>`;
+            html += `<tr><th>#</th><th>Feature</th><th>r</th><th>|r|</th></tr>`;
+            for (let i = 0; i < Math.min(10, sortedFeatures.length); i++) {
+                const [name, corr] = sortedFeatures[i];
+                const strength = Math.abs(corr) > 0.35 ? 'hl-yellow' : Math.abs(corr) > 0.25 ? 'hl-blue' : '';
+                html += `<tr>`;
+                html += `<td>${i + 1}</td>`;
+                html += `<td>${name}</td>`;
+                html += `<td class="${strength}">${corr.toFixed(4)}</td>`;
+                html += `<td class="${strength}">${Math.abs(corr).toFixed(4)}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Top combinations
+            html += `<div class="panel">`;
+            html += `<h3>🔮 Top Combinations</h3>`;
+            html += `<table>`;
+            html += `<tr><th>#</th><th>Features</th><th>Method</th><th>|r|</th></tr>`;
+            for (let i = 0; i < Math.min(10, combinations.length); i++) {
+                const combo = combinations[i];
+                const strength = combo.absR > 0.45 ? 'hl-green' : combo.absR > 0.35 ? 'hl-yellow' : '';
+                const featStr = combo.features.map(f => f.split('_')[0]).join('+');
+                html += `<tr>`;
+                html += `<td>${i + 1}</td>`;
+                html += `<td title="${combo.features.join(', ')}">${featStr}</td>`;
+                html += `<td>${combo.method}</td>`;
+                html += `<td class="${strength}">${combo.absR.toFixed(4)}</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end grid
+            
+            // Key findings
+            html += `<div class="panel">`;
+            html += `<h2>💡 Key Findings</h2>`;
+            
+            if (improvement > 15) {
+                html += `<div class="finding mega">`;
+                html += `<strong>🔥 SIGNALS COMBINE SYNERGISTICALLY!</strong><br>`;
+                html += `Combining ${bestCombo.size} signals improves correlation by ${improvement.toFixed(1)}%.<br>`;
+                html += `This suggests the signals capture <em>different</em> aspects of factor structure.`;
+                html += `</div>`;
+            } else if (improvement > 5) {
+                html += `<div class="finding positive">`;
+                html += `<strong>✓ Modest Combination Benefit</strong><br>`;
+                html += `Combining signals provides ${improvement.toFixed(1)}% improvement.<br>`;
+                html += `Some orthogonal information exists between signals.`;
+                html += `</div>`;
+            } else {
+                html += `<div class="finding">`;
+                html += `<strong>≈ Limited Combination Benefit</strong><br>`;
+                html += `Signals appear largely redundant (${improvement.toFixed(1)}% change).<br>`;
+                html += `They may be measuring the same underlying phenomenon.`;
+                html += `</div>`;
+            }
+            
+            // Best by size
+            const bestBySize = {};
+            for (const combo of combinations) {
+                if (!bestBySize[combo.size] || combo.absR > bestBySize[combo.size].absR) {
+                    bestBySize[combo.size] = combo;
+                }
+            }
+            
+            html += `<div class="finding">`;
+            html += `<strong>📈 Optimal Combination Size:</strong><br>`;
+            for (const size of Object.keys(bestBySize).sort()) {
+                const combo = bestBySize[size];
+                html += `${size} signals: |r| = ${combo.absR.toFixed(4)} (${combo.features.join(' + ')})<br>`;
+            }
+            html += `</div>`;
+            
+            // Feature synergy analysis
+            const featureCounts = {};
+            for (const combo of combinations.slice(0, 20)) {
+                for (const feat of combo.features) {
+                    featureCounts[feat] = (featureCounts[feat] || 0) + 1;
+                }
+            }
+            const topContributors = Object.entries(featureCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            html += `<div class="finding">`;
+            html += `<strong>🌟 Most Valuable Features (appear in top combos):</strong><br>`;
+            for (const [feat, count] of topContributors) {
+                html += `${feat}: ${count} appearances<br>`;
+            }
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function runFullAnalysis() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value) || 200;
+            const maxCombo = parseInt(document.getElementById('maxCombo').value) || 3;
+            runAnalysis(sampleSize, maxCombo);
+        }
+        
+        function runQuickTest() {
+            runAnalysis(50, 2);
+        }
+        
+        // Show initial message
+        document.getElementById('results').innerHTML = `
+            <div class="panel">
+                <h2>🔮 Signal Combinator</h2>
+                <p>This tool tests whether combining multiple multiplication signals produces stronger correlation with factor balance.</p>
+                <p><strong>Hypothesis:</strong> If different signals (Lattice carry, CSA pairs, XOR diff, etc.) measure <em>different</em> aspects of multiplication, their combination should exceed any single signal.</p>
+                <p>Click <strong>🔮 COMBINE SIGNALS</strong> to test!</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>

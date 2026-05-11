@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ FUSION: Multi-Signal Carry Extraction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0d0d1a 100%); color: #e0e0e0; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1800px; margin: 0 auto; }
+        h1 { font-size: 1.8em; margin-bottom: 10px; background: linear-gradient(135deg, #ffff00, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.2em; margin: 20px 0 15px 0; color: #00d4ff; }
+        h3 { font-size: 1em; margin: 15px 0 10px 0; color: #ffc800; }
+        .subtitle { color: #888; margin-bottom: 20px; }
+        .panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-group label { font-size: 0.8em; color: #aaa; }
+        input, select { padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 0.95em; width: 130px; }
+        button { padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #ffff00, #ff9900); color: #000; font-size: 1.1em; }
+        .btn-secondary { background: linear-gradient(135deg, #00d4ff, #0088ff); color: #000; }
+        button:hover { transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .insight-box { background: rgba(255, 255, 0, 0.1); border: 1px solid rgba(255, 255, 0, 0.3); border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .insight-box.success { background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); }
+        .insight-box.info { background: rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); }
+        .insight-box.critical { background: rgba(255, 0, 255, 0.15); border-color: rgba(255, 0, 255, 0.4); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 10px 0; }
+        th, td { padding: 8px; text-align: center; border: 1px solid #333; }
+        th { background: rgba(255, 255, 0, 0.2); }
+        .good { color: #00ff88; font-weight: bold; }
+        .excellent { color: #ff00ff; font-weight: bold; }
+        .perfect { color: #ffff00; font-weight: bold; text-shadow: 0 0 10px #ffff00; }
+        .bad { color: #ff4444; }
+        .warning { color: #ffc800; }
+        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0; }
+        .stat-box { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; min-width: 140px; text-align: center; flex: 1; }
+        .stat-value { font-size: 1.6em; font-weight: bold; }
+        .stat-label { font-size: 0.75em; color: #888; margin-top: 5px; }
+        .progress-bar { height: 30px; background: rgba(0,0,0,0.3); border-radius: 15px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .signal-card { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin: 8px 0; border-left: 4px solid #00d4ff; }
+        .signal-card.active { border-left-color: #00ff88; background: rgba(0,255,136,0.05); }
+        .log-area { font-family: monospace; font-size: 0.8em; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; max-height: 250px; overflow-y: auto; }
+        .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .method-result { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; text-align: center; }
+        .method-result.best { border: 2px solid #ffff00; background: rgba(255,255,0,0.1); }
+        canvas { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ FUSION: Multi-Signal Carry Extraction</h1>
+        <p class="subtitle">Combining orthogonal signals: If one gives 92%, what do many give?</p>
+        
+        <div class="panel">
+            <h2>The Hypothesis</h2>
+            <div class="insight-box info">
+                <strong>Current best (single model):</strong> 92.4% at 28-bit with simple logistic regression<br><br>
+                <strong>Question:</strong> What if we combine multiple orthogonal signal sources?<br><br>
+                <strong>Signal categories:</strong><br>
+                • Local bit patterns (current approach)<br>
+                • Higher-order carry features<br>
+                • Modular arithmetic signals<br>
+                • Spectral/frequency features<br>
+                • Ensemble voting across methods
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Samples</label>
+                <input type="number" id="samples" value="150" min="50" max="300">
+            </div>
+            <div class="control-group">
+                <label>Factor Bits</label>
+                <select id="bitSize">
+                    <option value="16">16-bit</option>
+                    <option value="20" selected>20-bit</option>
+                    <option value="24">24-bit</option>
+                    <option value="28">28-bit</option>
+                </select>
+            </div>
+            <button class="btn-primary" id="runBtn" onclick="runFusionAnalysis()">⚡ Run Fusion Analysis</button>
+        </div>
+        
+        <div class="panel">
+            <h2>📊 Individual Signal Performance</h2>
+            <div id="signalResults">
+                <p style="color: #666;">Run analysis to see individual signal performance...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🔗 Fusion Methods</h2>
+            <div id="fusionResults">
+                <p style="color: #666;">Comparing fusion strategies...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>📈 Improvement Over Baseline</h2>
+            <div id="improvementChart">
+                <canvas id="comparisonChart" height="200"></canvas>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🎯 Best Configuration</h2>
+            <div id="bestConfig">
+                <div class="insight-box">Run analysis to discover optimal signal combination...</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>📝 Analysis Log</h2>
+            <div class="log-area" id="logArea">Waiting to start...</div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // === UTILITIES ===
+        function log(msg) {
+            const area = document.getElementById('logArea');
+            const time = new Date().toLocaleTimeString();
+            area.textContent += `[${time}] ${msg}\n`;
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        function isPrime(n) {
+            if (n < 2) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(n); i += 2) if (n % i === 0) return false;
+            return true;
+        }
+        
+        function randomPrime(min, max) {
+            let p, attempts = 0;
+            do { 
+                p = Math.floor(Math.random() * (max - min)) + min;
+                if (++attempts > 10000) throw new Error("Prime search failed");
+            } while (!isPrime(p));
+            return p;
+        }
+        
+        function toBinary(n, pad = 0) {
+            return n.toString(2).padStart(pad, '0');
+        }
+        
+        // === TRACE COMPUTATION ===
+        function computeTrace(p, q) {
+            if (p > q) [p, q] = [q, p];
+            const N = p * q;
+            const nBin = toBinary(N);
+            const maxBits = nBin.length;
+            const trace = [];
+            let carry = 0;
+            
+            for (let pos = 0; pos < maxBits; pos++) {
+                let onesCount = 0;
+                for (let j = 0; j <= pos; j++) {
+                    const pBit = (p >> (pos - j)) & 1;
+                    const qBit = (q >> j) & 1;
+                    onesCount += pBit * qBit;
+                }
+                const totalSum = onesCount + carry;
+                const carryOut = Math.floor(totalSum / 2);
+                trace.push({ position: pos, carryOut: carryOut > 0 ? 1 : 0, nBit: parseInt(nBin[maxBits - 1 - pos] || '0') });
+                carry = carryOut;
+            }
+            return { p, q, N, nBin, trace, maxBits };
+        }
+        
+        // === SIGNAL 1: LOCAL BIT FEATURES ===
+        function extractLocalFeatures(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            f.nBit = parseInt(nBin[maxBits - 1 - pos] || '0');
+            f.prevBit = pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0;
+            f.nextBit = pos < maxBits - 1 ? parseInt(nBin[maxBits - 2 - pos] || '0') : 0;
+            f.prev2Bit = pos > 1 ? parseInt(nBin[maxBits - pos + 1] || '0') : 0;
+            f.next2Bit = pos < maxBits - 2 ? parseInt(nBin[maxBits - 3 - pos] || '0') : 0;
+            
+            // Run length
+            let runLen = 1;
+            const curr = nBin[maxBits - 1 - pos];
+            for (let d = 1; pos + d < maxBits && nBin[maxBits - 1 - pos - d] === curr; d++) runLen++;
+            for (let d = 1; pos - d >= 0 && nBin[maxBits - pos + d] === curr; d++) runLen++;
+            f.runLength = runLen;
+            
+            f.relativePos = pos / maxBits;
+            f.zeroAfterOnes = (f.nBit === 0 && f.prevBit === 1) ? 1 : 0;
+            f.doubleZero = (f.nBit === 0 && f.prevBit === 0) ? 1 : 0;
+            
+            return f;
+        }
+        
+        // === SIGNAL 2: GLOBAL PATTERN FEATURES ===
+        function extractGlobalFeatures(N) {
+            const bin = toBinary(N);
+            const g = {};
+            g.bitLength = bin.length;
+            g.popcount = bin.split('').filter(b => b === '1').length;
+            g.density = g.popcount / g.bitLength;
+            
+            const zeroRuns = bin.match(/0+/g) || [];
+            const oneRuns = bin.match(/1+/g) || [];
+            g.maxZeroRun = Math.max(0, ...zeroRuns.map(r => r.length));
+            g.maxOneRun = Math.max(0, ...oneRuns.map(r => r.length));
+            g.avgZeroRun = zeroRuns.length ? zeroRuns.reduce((a, r) => a + r.length, 0) / zeroRuns.length : 0;
+            g.avgOneRun = oneRuns.length ? oneRuns.reduce((a, r) => a + r.length, 0) / oneRuns.length : 0;
+            
+            let trans = 0;
+            for (let i = 1; i < bin.length; i++) if (bin[i] !== bin[i-1]) trans++;
+            g.transitions = trans;
+            g.transitionDensity = trans / bin.length;
+            
+            // Bit clustering
+            let adj = 0, tot = 0;
+            for (let i = 0; i < bin.length; i++) {
+                if (bin[i] === '1') {
+                    tot++;
+                    if (i > 0 && bin[i-1] === '1') adj++;
+                }
+            }
+            g.bitClustering = tot > 0 ? adj / tot : 0;
+            
+            return g;
+        }
+        
+        // === SIGNAL 3: MODULAR FEATURES ===
+        function extractModularFeatures(N, pos, maxBits) {
+            const m = {};
+            m.nMod3 = N % 3;
+            m.nMod7 = N % 7;
+            m.nMod15 = N % 15;
+            m.nMod31 = N % 31;
+            
+            // Position-specific modular
+            const posVal = (N >> pos) & 0xFF;
+            m.localMod3 = posVal % 3;
+            m.localMod7 = posVal % 7;
+            
+            // Bit position modular
+            m.posMod3 = pos % 3;
+            m.posMod4 = pos % 4;
+            
+            return m;
+        }
+        
+        // === SIGNAL 4: WINDOW/SPECTRAL FEATURES ===
+        function extractWindowFeatures(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const w = {};
+            
+            // 5-bit window centered on pos
+            let window5 = 0;
+            for (let d = -2; d <= 2; d++) {
+                const p = pos + d;
+                if (p >= 0 && p < maxBits) {
+                    const bit = parseInt(nBin[maxBits - 1 - p] || '0');
+                    window5 += bit << (d + 2);
+                }
+            }
+            w.window5 = window5;
+            w.window5Pop = toBinary(window5).split('').filter(b => b === '1').length;
+            
+            // 7-bit window
+            let window7 = 0;
+            for (let d = -3; d <= 3; d++) {
+                const p = pos + d;
+                if (p >= 0 && p < maxBits) {
+                    const bit = parseInt(nBin[maxBits - 1 - p] || '0');
+                    window7 += bit << (d + 3);
+                }
+            }
+            w.window7 = window7;
+            w.window7Pop = toBinary(window7).split('').filter(b => b === '1').length;
+            
+            // Gradient (difference from neighbors)
+            const currBit = parseInt(nBin[maxBits - 1 - pos] || '0');
+            const prevBit = pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0;
+            const nextBit = pos < maxBits - 1 ? parseInt(nBin[maxBits - 2 - pos] || '0') : 0;
+            w.gradient = nextBit - prevBit;
+            w.laplacian = prevBit + nextBit - 2 * currBit;
+            
+            return w;
+        }
+        
+        // === SIGNAL 5: HIGHER-ORDER CARRY ESTIMATION ===
+        function extractCarryEstimationFeatures(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const c = {};
+            
+            // Count zeros in a row before this position (suggests incoming carry)
+            let zerosBeforeCount = 0;
+            for (let i = pos - 1; i >= 0 && nBin[maxBits - 1 - i] === '0'; i--) zerosBeforeCount++;
+            c.zerosBefore = zerosBeforeCount;
+            
+            // Count ones in a row before this position (suggests no carry)
+            let onesBeforeCount = 0;
+            for (let i = pos - 1; i >= 0 && nBin[maxBits - 1 - i] === '1'; i--) onesBeforeCount++;
+            c.onesBefore = onesBeforeCount;
+            
+            // Cumulative popcount ratio
+            let cumPop = 0;
+            for (let i = 0; i <= pos; i++) cumPop += parseInt(nBin[maxBits - 1 - i] || '0');
+            c.cumPopRatio = cumPop / (pos + 1);
+            
+            // Expected carry density based on position
+            c.expectedCarryDensity = Math.min(1, pos / maxBits * 1.5);
+            
+            // Pattern: 0 after 1s is strong carry indicator
+            const curr = parseInt(nBin[maxBits - 1 - pos] || '0');
+            const prev = pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0;
+            c.zeroAfterOne = (curr === 0 && prev === 1) ? 1 : 0;
+            c.zeroAfterZero = (curr === 0 && prev === 0) ? 1 : 0;
+            
+            return c;
+        }
+        
+        // === PREDICTOR FUNCTIONS ===
+        function predictWithLocal(N, pos, maxBits, global, weights) {
+            const f = extractLocalFeatures(N, pos, maxBits);
+            let score = weights.bias || 0;
+            score += (weights.nBit || 0) * f.nBit;
+            score += (weights.prevBit || 0) * f.prevBit;
+            score += (weights.nextBit || 0) * f.nextBit;
+            score += (weights.runLength || 0) * f.runLength / maxBits;
+            score += (weights.relativePos || 0) * f.relativePos;
+            score += (weights.zeroAfterOnes || 0) * f.zeroAfterOnes;
+            score += (weights.doubleZero || 0) * f.doubleZero;
+            score += (weights.maxOneRun || 0) * global.maxOneRun / maxBits;
+            score += (weights.bitClustering || 0) * global.bitClustering;
+            return 1 / (1 + Math.exp(-score));
+        }
+        
+        function predictWithModular(N, pos, maxBits, weights) {
+            const m = extractModularFeatures(N, pos, maxBits);
+            let score = weights.bias || 0;
+            score += (weights.nMod3 || 0) * (m.nMod3 / 3);
+            score += (weights.nMod7 || 0) * (m.nMod7 / 7);
+            score += (weights.localMod3 || 0) * (m.localMod3 / 3);
+            score += (weights.posMod3 || 0) * (m.posMod3 / 3);
+            score += (weights.relPos || 0) * (pos / maxBits);
+            return 1 / (1 + Math.exp(-score));
+        }
+        
+        function predictWithWindow(N, pos, maxBits, weights) {
+            const w = extractWindowFeatures(N, pos, maxBits);
+            let score = weights.bias || 0;
+            score += (weights.window5Pop || 0) * (w.window5Pop / 5);
+            score += (weights.window7Pop || 0) * (w.window7Pop / 7);
+            score += (weights.gradient || 0) * w.gradient;
+            score += (weights.laplacian || 0) * w.laplacian;
+            score += (weights.relPos || 0) * (pos / maxBits);
+            return 1 / (1 + Math.exp(-score));
+        }
+        
+        function predictWithCarryEst(N, pos, maxBits, weights) {
+            const c = extractCarryEstimationFeatures(N, pos, maxBits);
+            let score = weights.bias || 0;
+            score += (weights.zerosBefore || 0) * c.zerosBefore / maxBits;
+            score += (weights.onesBefore || 0) * c.onesBefore / maxBits;
+            score += (weights.cumPopRatio || 0) * c.cumPopRatio;
+            score += (weights.zeroAfterOne || 0) * c.zeroAfterOne;
+            score += (weights.zeroAfterZero || 0) * c.zeroAfterZero;
+            score += (weights.expectedCarryDensity || 0) * c.expectedCarryDensity;
+            return 1 / (1 + Math.exp(-score));
+        }
+        
+        // === TRAINING ===
+        function trainPredictor(data, extractFn, featureKeys) {
+            const weights = { bias: 0 };
+            featureKeys.forEach(k => weights[k] = Math.random() * 0.5 - 0.25);
+            
+            const lr = 0.05;
+            const epochs = 25;
+            
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                for (const d of data) {
+                    const global = extractGlobalFeatures(d.N);
+                    for (let pos = 0; pos < d.trace.length; pos++) {
+                        const features = extractFn(d.N, pos, d.maxBits, global);
+                        const target = d.trace[pos].carryOut;
+                        
+                        let score = weights.bias;
+                        featureKeys.forEach(k => {
+                            const val = features[k] !== undefined ? features[k] : 0;
+                            const norm = k.includes('Mod') ? val / 10 : (k === 'relPos' ? val : val / d.maxBits);
+                            score += weights[k] * norm;
+                        });
+                        
+                        const prob = 1 / (1 + Math.exp(-score));
+                        const error = target - prob;
+                        const grad = error * prob * (1 - prob);
+                        
+                        weights.bias += lr * grad;
+                        featureKeys.forEach(k => {
+                            const val = features[k] !== undefined ? features[k] : 0;
+                            const norm = k.includes('Mod') ? val / 10 : (k === 'relPos' ? val : val / d.maxBits);
+                            weights[k] += lr * grad * norm;
+                        });
+                    }
+                }
+            }
+            
+            return weights;
+        }
+        
+        // === COMBINED FEATURE TRAINING ===
+        function trainCombined(data) {
+            const weights = {
+                bias: 0,
+                // Local
+                nBit: -1, prevBit: 0.5, nextBit: 0.3, prev2Bit: 0.2, runLength: 0.3,
+                relativePos: 1, zeroAfterOnes: 2, doubleZero: 1,
+                // Global
+                maxOneRun: -1, maxZeroRun: 0.5, bitClustering: -1, transitionDensity: 0.5,
+                // Modular
+                nMod3: 0.1, nMod7: 0.1,
+                // Window
+                window5Pop: 0.3, gradient: 0.2, laplacian: 0.1,
+                // Carry estimation
+                zerosBefore: 1, onesBefore: -0.5, cumPopRatio: 0.5, zeroAfterOne: 2, zeroAfterZero: 1
+            };
+            
+            const lr = 0.03;
+            const epochs = 30;
+            
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                for (const d of data) {
+                    const global = extractGlobalFeatures(d.N);
+                    
+                    for (let pos = 0; pos < d.trace.length; pos++) {
+                        const local = extractLocalFeatures(d.N, pos, d.maxBits);
+                        const mod = extractModularFeatures(d.N, pos, d.maxBits);
+                        const win = extractWindowFeatures(d.N, pos, d.maxBits);
+                        const carry = extractCarryEstimationFeatures(d.N, pos, d.maxBits);
+                        const target = d.trace[pos].carryOut;
+                        
+                        let score = weights.bias;
+                        // Local
+                        score += weights.nBit * local.nBit;
+                        score += weights.prevBit * local.prevBit;
+                        score += weights.nextBit * local.nextBit;
+                        score += weights.runLength * local.runLength / d.maxBits;
+                        score += weights.relativePos * local.relativePos;
+                        score += weights.zeroAfterOnes * local.zeroAfterOnes;
+                        score += weights.doubleZero * local.doubleZero;
+                        // Global
+                        score += weights.maxOneRun * global.maxOneRun / d.maxBits;
+                        score += weights.maxZeroRun * global.maxZeroRun / d.maxBits;
+                        score += weights.bitClustering * global.bitClustering;
+                        score += weights.transitionDensity * global.transitionDensity;
+                        // Modular
+                        score += weights.nMod3 * (mod.nMod3 / 3);
+                        score += weights.nMod7 * (mod.nMod7 / 7);
+                        // Window
+                        score += weights.window5Pop * (win.window5Pop / 5);
+                        score += weights.gradient * win.gradient;
+                        score += weights.laplacian * win.laplacian;
+                        // Carry
+                        score += weights.zerosBefore * carry.zerosBefore / d.maxBits;
+                        score += weights.onesBefore * carry.onesBefore / d.maxBits;
+                        score += weights.cumPopRatio * carry.cumPopRatio;
+                        score += weights.zeroAfterOne * carry.zeroAfterOne;
+                        score += weights.zeroAfterZero * carry.zeroAfterZero;
+                        
+                        const prob = 1 / (1 + Math.exp(-score));
+                        const error = target - prob;
+                        const grad = error * prob * (1 - prob);
+                        
+                        // Update all weights
+                        weights.bias += lr * grad;
+                        weights.nBit += lr * grad * local.nBit;
+                        weights.prevBit += lr * grad * local.prevBit;
+                        weights.nextBit += lr * grad * local.nextBit;
+                        weights.runLength += lr * grad * local.runLength / d.maxBits;
+                        weights.relativePos += lr * grad * local.relativePos;
+                        weights.zeroAfterOnes += lr * grad * local.zeroAfterOnes;
+                        weights.doubleZero += lr * grad * local.doubleZero;
+                        weights.maxOneRun += lr * grad * global.maxOneRun / d.maxBits;
+                        weights.maxZeroRun += lr * grad * global.maxZeroRun / d.maxBits;
+                        weights.bitClustering += lr * grad * global.bitClustering;
+                        weights.transitionDensity += lr * grad * global.transitionDensity;
+                        weights.nMod3 += lr * grad * (mod.nMod3 / 3);
+                        weights.nMod7 += lr * grad * (mod.nMod7 / 7);
+                        weights.window5Pop += lr * grad * (win.window5Pop / 5);
+                        weights.gradient += lr * grad * win.gradient;
+                        weights.laplacian += lr * grad * win.laplacian;
+                        weights.zerosBefore += lr * grad * carry.zerosBefore / d.maxBits;
+                        weights.onesBefore += lr * grad * carry.onesBefore / d.maxBits;
+                        weights.cumPopRatio += lr * grad * carry.cumPopRatio;
+                        weights.zeroAfterOne += lr * grad * carry.zeroAfterOne;
+                        weights.zeroAfterZero += lr * grad * carry.zeroAfterZero;
+                    }
+                }
+            }
+            
+            return weights;
+        }
+        
+        function predictCombined(N, pos, maxBits, global, weights) {
+            const local = extractLocalFeatures(N, pos, maxBits);
+            const mod = extractModularFeatures(N, pos, maxBits);
+            const win = extractWindowFeatures(N, pos, maxBits);
+            const carry = extractCarryEstimationFeatures(N, pos, maxBits);
+            
+            let score = weights.bias;
+            score += weights.nBit * local.nBit;
+            score += weights.prevBit * local.prevBit;
+            score += weights.nextBit * local.nextBit;
+            score += weights.runLength * local.runLength / maxBits;
+            score += weights.relativePos * local.relativePos;
+            score += weights.zeroAfterOnes * local.zeroAfterOnes;
+            score += weights.doubleZero * local.doubleZero;
+            score += weights.maxOneRun * global.maxOneRun / maxBits;
+            score += weights.maxZeroRun * global.maxZeroRun / maxBits;
+            score += weights.bitClustering * global.bitClustering;
+            score += weights.transitionDensity * global.transitionDensity;
+            score += weights.nMod3 * (mod.nMod3 / 3);
+            score += weights.nMod7 * (mod.nMod7 / 7);
+            score += weights.window5Pop * (win.window5Pop / 5);
+            score += weights.gradient * win.gradient;
+            score += weights.laplacian * win.laplacian;
+            score += weights.zerosBefore * carry.zerosBefore / maxBits;
+            score += weights.onesBefore * carry.onesBefore / maxBits;
+            score += weights.cumPopRatio * carry.cumPopRatio;
+            score += weights.zeroAfterOne * carry.zeroAfterOne;
+            score += weights.zeroAfterZero * carry.zeroAfterZero;
+            
+            return 1 / (1 + Math.exp(-score));
+        }
+        
+        // === EVALUATION ===
+        function evaluate(testData, predictFn, ...args) {
+            let correct = 0, total = 0, perfect = 0;
+            
+            for (const d of testData) {
+                const global = extractGlobalFeatures(d.N);
+                let sampleCorrect = 0;
+                
+                for (let pos = 0; pos < d.trace.length; pos++) {
+                    const actual = d.trace[pos].carryOut;
+                    const prob = predictFn(d.N, pos, d.maxBits, global, ...args);
+                    const pred = prob > 0.5 ? 1 : 0;
+                    
+                    total++;
+                    if (pred === actual) { correct++; sampleCorrect++; }
+                }
+                
+                if (sampleCorrect === d.trace.length) perfect++;
+            }
+            
+            return {
+                accuracy: correct / total,
+                perfectRate: perfect / testData.length,
+                perfectCount: perfect
+            };
+        }
+        
+        // === ENSEMBLE VOTING ===
+        function evaluateEnsemble(testData, predictors) {
+            let correct = 0, total = 0, perfect = 0;
+            
+            for (const d of testData) {
+                const global = extractGlobalFeatures(d.N);
+                let sampleCorrect = 0;
+                
+                for (let pos = 0; pos < d.trace.length; pos++) {
+                    const actual = d.trace[pos].carryOut;
+                    
+                    // Get votes from each predictor
+                    let voteSum = 0;
+                    for (const { fn, weights, weight } of predictors) {
+                        const prob = fn(d.N, pos, d.maxBits, global, weights);
+                        voteSum += prob * weight;
+                    }
+                    
+                    const totalWeight = predictors.reduce((s, p) => s + p.weight, 0);
+                    const avgProb = voteSum / totalWeight;
+                    const pred = avgProb > 0.5 ? 1 : 0;
+                    
+                    total++;
+                    if (pred === actual) { correct++; sampleCorrect++; }
+                }
+                
+                if (sampleCorrect === d.trace.length) perfect++;
+            }
+            
+            return {
+                accuracy: correct / total,
+                perfectRate: perfect / testData.length,
+                perfectCount: perfect
+            };
+        }
+        
+        // === DATA GENERATION ===
+        function generateData(n, bits) {
+            const data = [];
+            const min = Math.pow(2, bits - 1);
+            const max = Math.pow(2, bits);
+            
+            for (let i = 0; i < n; i++) {
+                const p = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                const q = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                data.push(computeTrace(Math.min(p, q), Math.max(p, q)));
+            }
+            return data;
+        }
+        
+        // === MAIN ===
+        let chartInstance = null;
+        
+        async function runFusionAnalysis() {
+            const samples = parseInt(document.getElementById('samples').value);
+            const bits = parseInt(document.getElementById('bitSize').value);
+            
+            document.getElementById('runBtn').disabled = true;
+            document.getElementById('logArea').textContent = '';
+            
+            log(`Starting fusion analysis: ${samples} samples at ${bits}-bit`);
+            
+            // Generate data
+            log('Generating semiprimes...');
+            const data = generateData(samples, bits);
+            const trainSize = Math.floor(samples * 0.7);
+            const trainData = data.slice(0, trainSize);
+            const testData = data.slice(trainSize);
+            
+            log(`Training: ${trainData.length}, Testing: ${testData.length}`);
+            
+            const results = {};
+            
+            // === SIGNAL 1: Local features (baseline) ===
+            log('\n--- Training Signal 1: Local Bit Features ---');
+            const localWeights = {
+                bias: 0, nBit: -1, prevBit: 0.5, nextBit: 0.3, runLength: 0.3,
+                relativePos: 1, zeroAfterOnes: 2, doubleZero: 1, maxOneRun: -1, bitClustering: -1
+            };
+            // Simple training for local
+            for (let epoch = 0; epoch < 25; epoch++) {
+                for (const d of trainData) {
+                    const global = extractGlobalFeatures(d.N);
+                    for (let pos = 0; pos < d.trace.length; pos++) {
+                        const f = extractLocalFeatures(d.N, pos, d.maxBits);
+                        const target = d.trace[pos].carryOut;
+                        const prob = predictWithLocal(d.N, pos, d.maxBits, global, localWeights);
+                        const error = target - prob;
+                        const grad = error * prob * (1 - prob) * 0.05;
+                        localWeights.bias += grad;
+                        localWeights.nBit += grad * f.nBit;
+                        localWeights.zeroAfterOnes += grad * f.zeroAfterOnes;
+                        localWeights.relativePos += grad * f.relativePos;
+                    }
+                }
+            }
+            results.local = evaluate(testData, predictWithLocal, localWeights);
+            log(`Local features: ${(results.local.accuracy * 100).toFixed(1)}% accuracy`);
+            
+            // === SIGNAL 2: Combined all features ===
+            log('\n--- Training Signal 2: Combined Features ---');
+            const combinedWeights = trainCombined(trainData);
+            results.combined = evaluate(testData, predictCombined, combinedWeights);
+            log(`Combined features: ${(results.combined.accuracy * 100).toFixed(1)}% accuracy`);
+            
+            // === SIGNAL 3: Ensemble voting ===
+            log('\n--- Building Ensemble ---');
+            const ensemble = [
+                { fn: predictWithLocal, weights: localWeights, weight: 1.0 },
+                { fn: predictCombined, weights: combinedWeights, weight: 1.5 }
+            ];
+            results.ensemble = evaluateEnsemble(testData, ensemble);
+            log(`Ensemble: ${(results.ensemble.accuracy * 100).toFixed(1)}% accuracy`);
+            
+            // === Display Results ===
+            displaySignalResults(results);
+            displayFusionResults(results);
+            updateChart(results);
+            displayBestConfig(results, bits);
+            
+            log('\n=== Analysis complete ===');
+            document.getElementById('runBtn').disabled = false;
+        }
+        
+        function displaySignalResults(results) {
+            let html = '<div class="comparison-grid">';
+            
+            const methods = [
+                { key: 'local', name: 'Local Bit Features', desc: 'Original 16-feature model' },
+                { key: 'combined', name: 'Combined Features', desc: 'Local + Modular + Window + Carry' },
+                { key: 'ensemble', name: 'Ensemble Voting', desc: 'Weighted combination' }
+            ];
+            
+            const best = Object.keys(results).reduce((a, b) => results[a].accuracy > results[b].accuracy ? a : b);
+            
+            for (const m of methods) {
+                const r = results[m.key];
+                const isBest = m.key === best;
+                const accClass = r.accuracy >= 0.95 ? 'perfect' : r.accuracy >= 0.9 ? 'excellent' : r.accuracy >= 0.8 ? 'good' : '';
+                
+                html += `<div class="method-result ${isBest ? 'best' : ''}">`;
+                html += `<h3>${m.name}</h3>`;
+                html += `<div class="stat-value ${accClass}">${(r.accuracy * 100).toFixed(1)}%</div>`;
+                html += `<div class="stat-label">Bit Accuracy</div>`;
+                html += `<div style="margin-top: 10px;">Perfect: ${r.perfectCount} (${(r.perfectRate * 100).toFixed(1)}%)</div>`;
+                html += `<div style="font-size: 0.8em; color: #888; margin-top: 5px;">${m.desc}</div>`;
+                if (isBest) html += '<div style="color: #ffff00; margin-top: 5px;">★ BEST</div>';
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('signalResults').innerHTML = html;
+        }
+        
+        function displayFusionResults(results) {
+            const baseline = results.local.accuracy;
+            const best = Math.max(...Object.values(results).map(r => r.accuracy));
+            const improvement = ((best - baseline) / baseline * 100).toFixed(1);
+            
+            let html = '<div class="stats-row">';
+            html += `<div class="stat-box"><div class="stat-value">${(baseline * 100).toFixed(1)}%</div><div class="stat-label">Baseline (Local)</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value ${best > baseline ? 'good' : ''}">${(best * 100).toFixed(1)}%</div><div class="stat-label">Best Fusion</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value ${improvement > 0 ? 'good' : 'warning'}">${improvement > 0 ? '+' : ''}${improvement}%</div><div class="stat-label">Improvement</div></div>`;
+            html += '</div>';
+            
+            if (best >= 0.95) {
+                html += '<div class="insight-box success"><strong>🎯 EXCELLENT!</strong> Combined signals achieve >95% accuracy!</div>';
+            } else if (best >= 0.9) {
+                html += '<div class="insight-box"><strong>Strong result.</strong> Signal fusion provides meaningful improvement.</div>';
+            }
+            
+            document.getElementById('fusionResults').innerHTML = html;
+        }
+        
+        function updateChart(results) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            if (chartInstance) chartInstance.destroy();
+            
+            const labels = ['Local Features', 'Combined', 'Ensemble'];
+            const accuracies = [results.local.accuracy * 100, results.combined.accuracy * 100, results.ensemble.accuracy * 100];
+            const perfectRates = [results.local.perfectRate * 100, results.combined.perfectRate * 100, results.ensemble.perfectRate * 100];
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Bit Accuracy %', data: accuracies, backgroundColor: 'rgba(255, 0, 255, 0.7)' },
+                        { label: 'Perfect Rate %', data: perfectRates, backgroundColor: 'rgba(0, 255, 136, 0.7)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } },
+                        x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } }
+                    },
+                    plugins: { legend: { labels: { color: '#e0e0e0' } } }
+                }
+            });
+        }
+        
+        function displayBestConfig(results, bits) {
+            const best = Object.entries(results).reduce((a, b) => a[1].accuracy > b[1].accuracy ? a : b);
+            const [method, r] = best;
+            
+            let html = `<div class="insight-box ${r.accuracy >= 0.95 ? 'critical' : r.accuracy >= 0.9 ? 'success' : ''}">`;
+            html += `<h3>Best Method: ${method.toUpperCase()}</h3>`;
+            html += `<div style="font-size: 2em; margin: 15px 0;" class="${r.accuracy >= 0.95 ? 'perfect' : 'excellent'}">${(r.accuracy * 100).toFixed(1)}%</div>`;
+            html += `<div>Perfect reconstructions: <strong>${r.perfectCount}</strong> at ${bits}-bit</div>`;
+            html += '<br>';
+            
+            if (r.accuracy >= 0.95) {
+                html += '<strong style="color: #ffff00;">⚡ APPROACHING CRITICAL THRESHOLD</strong><br>';
+                html += 'At >95% accuracy, practical exploitation becomes viable.';
+            } else if (r.accuracy >= 0.9) {
+                html += '<strong style="color: #00ff88;">Strong signal fusion achieved.</strong><br>';
+                html += 'Combined signals outperform individual methods.';
+            }
+            
+            html += '</div>';
+            
+            // Recommendations
+            html += '<h3>Next Steps</h3>';
+            html += '<ul style="margin-left: 20px; line-height: 1.8;">';
+            html += '<li>Add neural network layers for non-linear feature combinations</li>';
+            html += '<li>Include sequence-aware models (LSTM/attention)</li>';
+            html += '<li>Test at 32-bit, 40-bit to verify scaling holds</li>';
+            html += '<li>Analyze which feature categories contribute most</li>';
+            html += '</ul>';
+            
+            document.getElementById('bestConfig').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 GRIND: Carry Sequence Reconstruction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0d0d1a 100%); color: #e0e0e0; min-height: 100vh; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { font-size: 1.8em; margin-bottom: 10px; background: linear-gradient(135deg, #ff00ff, #00ffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.3em; margin: 20px 0 15px 0; color: #00d4ff; }
+        h3 { font-size: 1.1em; margin: 15px 0 10px 0; color: #ffc800; }
+        .subtitle { color: #888; margin-bottom: 20px; }
+        .panel { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-group label { font-size: 0.8em; color: #aaa; }
+        input, select { padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 0.95em; width: 120px; }
+        button { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #ff00ff, #ff00aa); color: #fff; }
+        .btn-secondary { background: linear-gradient(135deg, #00d4ff, #0088ff); color: #000; }
+        button:hover { transform: translateY(-1px); }
+        .insight-box { background: rgba(255, 0, 255, 0.1); border: 1px solid rgba(255, 0, 255, 0.3); border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .insight-box.success { background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); }
+        .insight-box.info { background: rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); }
+        .formula { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin: 10px 0; font-size: 0.85em; overflow-x: auto; white-space: pre-wrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8em; margin: 10px 0; }
+        th, td { padding: 6px; text-align: center; border: 1px solid #333; }
+        th { background: rgba(255, 0, 255, 0.2); }
+        .good { color: #00ff88; font-weight: bold; }
+        .excellent { color: #ff00ff; font-weight: bold; }
+        .perfect { color: #ffff00; font-weight: bold; text-shadow: 0 0 10px #ffff00; }
+        .bad { color: #ff4444; }
+        .neutral { color: #ffc800; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 15px 0; }
+        .stat-card { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-value { font-size: 1.4em; font-weight: bold; }
+        .stat-label { font-size: 0.7em; color: #888; margin-top: 4px; }
+        .progress-bar { height: 24px; background: rgba(0,0,0,0.3); border-radius: 12px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-size: 0.9em; font-weight: bold; }
+        .bit-display { font-family: monospace; font-size: 0.9em; letter-spacing: 2px; }
+        .bit-match { color: #00ff88; }
+        .bit-miss { color: #ff4444; background: rgba(255,0,0,0.2); }
+        .reconstruction-row { display: flex; gap: 20px; align-items: center; margin: 5px 0; font-family: monospace; }
+        .reconstruction-label { width: 120px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 GRIND: Carry Sequence Reconstruction</h1>
+        <p class="subtitle">From r = 0.86 (aggregates) → r = ? (full sequence) → r = 1.0 (factoring solved)</p>
+        
+        <div class="panel">
+            <h2>The Goal</h2>
+            <div class="insight-box info">
+                <strong>Current state:</strong> r = 0.86 predicting carryChainLength from maxOneRun<br><br>
+                <strong>Target:</strong> Reconstruct the COMPLETE carry sequence [c₀, c₁, ..., c₂ₖ] from N alone<br><br>
+                <strong>If achieved:</strong> onesFromPP = N + 2·carryOut - carryIn → polynomial factoring → p, q
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Sample Size</label>
+                <input type="number" id="sampleSize" value="200" min="50" max="500">
+            </div>
+            <div class="control-group">
+                <label>Factor Bits</label>
+                <select id="bitRange">
+                    <option value="8">8-bit</option>
+                    <option value="10" selected>10-bit</option>
+                    <option value="12">12-bit</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="runReconstruction()">🎯 Attempt Reconstruction</button>
+            <button class="btn-secondary" onclick="runSingleTrace()">🔍 Single Trace</button>
+        </div>
+        
+        <div id="singleTrace" class="panel" style="display: none;">
+            <h2>Single Reconstruction Trace</h2>
+            <div id="singleTraceContent"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>📊 Reconstruction Accuracy</h2>
+            <div id="reconstructionResults">
+                <p style="color: #666;">Click "Attempt Reconstruction" to test carry sequence recovery...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🧮 Per-Position Prediction Accuracy</h2>
+            <div id="positionAccuracy">
+                <p style="color: #666;">Results will show accuracy at each bit position...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🔬 Learned Feature Weights</h2>
+            <div id="regressionResults">
+                <p style="color: #666;">Training model...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>💡 Information-Theoretic Analysis</h2>
+            <div id="informationTheory">
+                <p style="color: #666;">Analyzing recoverable information...</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>🎯 The Ceiling</h2>
+            <div id="ceilingAnalysis">
+                <div class="insight-box">Run the analysis to discover where the ceiling lies...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function isPrime(n) {
+            if (n < 2) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(n); i += 2) if (n % i === 0) return false;
+            return true;
+        }
+        
+        function randomPrime(min, max) {
+            let p;
+            do { p = Math.floor(Math.random() * (max - min)) + min; } while (!isPrime(p));
+            return p;
+        }
+        
+        function toBinary(n, pad = 0) {
+            return n.toString(2).padStart(pad, '0');
+        }
+        
+        function popcount(n) {
+            return toBinary(n).split('').filter(b => b === '1').length;
+        }
+        
+        function computeTrace(p, q) {
+            if (p > q) [p, q] = [q, p];
+            const N = p * q;
+            const nBin = toBinary(N);
+            const maxBits = nBin.length;
+            const trace = [];
+            let carry = 0;
+            
+            for (let pos = 0; pos < maxBits; pos++) {
+                let onesCount = 0;
+                for (let j = 0; j <= pos; j++) {
+                    const pBit = (p >> (pos - j)) & 1;
+                    const qBit = (q >> j) & 1;
+                    onesCount += pBit * qBit;
+                }
+                const totalSum = onesCount + carry;
+                const outputBit = totalSum % 2;
+                const carryOut = Math.floor(totalSum / 2);
+                trace.push({ position: pos, onesFromPP: onesCount, carryIn: carry, totalSum, outputBit, carryOut, nBit: parseInt(nBin[maxBits - 1 - pos] || '0') });
+                carry = carryOut;
+            }
+            return { p, q, N, nBin, trace, maxBits };
+        }
+        
+        function extractFeatures(N, pos, maxBits) {
+            const nBin = toBinary(N, maxBits);
+            const f = {};
+            f.nBit = parseInt(nBin[maxBits - 1 - pos] || '0');
+            f.prevBit = pos > 0 ? parseInt(nBin[maxBits - pos] || '0') : 0;
+            f.nextBit = pos < maxBits - 1 ? parseInt(nBin[maxBits - 2 - pos] || '0') : 0;
+            f.prev2Bit = pos > 1 ? parseInt(nBin[maxBits - pos + 1] || '0') : 0;
+            
+            let runLen = 1;
+            const curr = nBin[maxBits - 1 - pos];
+            for (let d = 1; pos + d < maxBits && nBin[maxBits - 1 - pos - d] === curr; d++) runLen++;
+            for (let d = 1; pos - d >= 0 && nBin[maxBits - pos + d] === curr; d++) runLen++;
+            f.runLength = runLen;
+            
+            f.relativePos = pos / maxBits;
+            f.distFromEnd = maxBits - 1 - pos;
+            
+            let cumPop = 0;
+            for (let i = 0; i <= pos; i++) cumPop += parseInt(nBin[maxBits - 1 - i] || '0');
+            f.cumPopcount = cumPop;
+            
+            f.isTransition = f.nBit !== f.prevBit ? 1 : 0;
+            f.zeroAfterOnes = (f.nBit === 0 && f.prevBit === 1) ? 1 : 0;
+            f.oneAfterZeros = (f.nBit === 1 && f.prevBit === 0) ? 1 : 0;
+            f.doubleZero = (f.nBit === 0 && f.prevBit === 0) ? 1 : 0;
+            f.doubleOne = (f.nBit === 1 && f.prevBit === 1) ? 1 : 0;
+            
+            return f;
+        }
+        
+        function extractGlobal(N) {
+            const bin = toBinary(N);
+            const g = {};
+            g.popcount = popcount(N);
+            g.bitLength = bin.length;
+            const zeroRuns = bin.match(/0+/g) || [];
+            const oneRuns = bin.match(/1+/g) || [];
+            g.maxZeroRun = Math.max(0, ...zeroRuns.map(r => r.length));
+            g.maxOneRun = Math.max(0, ...oneRuns.map(r => r.length));
+            let trans = 0;
+            for (let i = 1; i < bin.length; i++) if (bin[i] !== bin[i-1]) trans++;
+            g.transitions = trans;
+            let trailing = 0;
+            for (let i = bin.length - 1; i >= 0 && bin[i] === '1'; i--) trailing++;
+            g.trailingOnes = trailing;
+            let adj = 0, tot = 0;
+            for (let i = 0; i < bin.length; i++) {
+                if (bin[i] === '1') {
+                    tot++;
+                    if (i > 0 && bin[i-1] === '1') adj++;
+                    if (i < bin.length - 1 && bin[i+1] === '1') adj++;
+                }
+            }
+            g.bitClustering = tot > 0 ? adj / (2 * tot) : 0;
+            return g;
+        }
+        
+        function predictCarryML(N, pos, maxBits, global, weights) {
+            const f = extractFeatures(N, pos, maxBits);
+            let score = weights.bias;
+            score += weights.nBit * f.nBit;
+            score += weights.prevBit * f.prevBit;
+            score += weights.nextBit * f.nextBit;
+            score += weights.prev2Bit * f.prev2Bit;
+            score += weights.runLength * f.runLength / maxBits;
+            score += weights.relativePos * f.relativePos;
+            score += weights.zeroAfterOnes * f.zeroAfterOnes;
+            score += weights.oneAfterZeros * f.oneAfterZeros;
+            score += weights.doubleZero * f.doubleZero;
+            score += weights.doubleOne * f.doubleOne;
+            score += weights.cumPopcount * f.cumPopcount / maxBits;
+            score += weights.isTransition * f.isTransition;
+            score += weights.maxOneRun * global.maxOneRun / maxBits;
+            score += weights.maxZeroRun * global.maxZeroRun / maxBits;
+            score += weights.bitClustering * global.bitClustering;
+            score += weights.trailingOnes * global.trailingOnes / maxBits;
+            const prob = 1 / (1 + Math.exp(-score));
+            return { prediction: prob > 0.5 ? 1 : 0, probability: prob };
+        }
+        
+        function learnWeights(data) {
+            let w = { bias: 0, nBit: -1, prevBit: 0.5, nextBit: 0.3, prev2Bit: 0.2, runLength: 0.3, relativePos: 1, zeroAfterOnes: 2, oneAfterZeros: -1, doubleZero: 1, doubleOne: -0.5, cumPopcount: 0.5, isTransition: 0.5, maxOneRun: -1, maxZeroRun: 0.5, bitClustering: -1, trailingOnes: -0.5 };
+            const lr = 0.05;
+            const epochs = 30;
+            
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                for (const d of data) {
+                    const global = extractGlobal(d.N);
+                    for (let pos = 0; pos < d.trace.length; pos++) {
+                        const f = extractFeatures(d.N, pos, d.maxBits);
+                        const target = d.trace[pos].carryOut > 0 ? 1 : 0;
+                        
+                        let score = w.bias;
+                        score += w.nBit * f.nBit;
+                        score += w.prevBit * f.prevBit;
+                        score += w.nextBit * f.nextBit;
+                        score += w.prev2Bit * f.prev2Bit;
+                        score += w.runLength * f.runLength / d.maxBits;
+                        score += w.relativePos * f.relativePos;
+                        score += w.zeroAfterOnes * f.zeroAfterOnes;
+                        score += w.oneAfterZeros * f.oneAfterZeros;
+                        score += w.doubleZero * f.doubleZero;
+                        score += w.doubleOne * f.doubleOne;
+                        score += w.cumPopcount * f.cumPopcount / d.maxBits;
+                        score += w.isTransition * f.isTransition;
+                        score += w.maxOneRun * global.maxOneRun / d.maxBits;
+                        score += w.maxZeroRun * global.maxZeroRun / d.maxBits;
+                        score += w.bitClustering * global.bitClustering;
+                        score += w.trailingOnes * global.trailingOnes / d.maxBits;
+                        
+                        const prob = 1 / (1 + Math.exp(-score));
+                        const error = target - prob;
+                        const grad = error * prob * (1 - prob);
+                        
+                        w.bias += lr * grad;
+                        w.nBit += lr * grad * f.nBit;
+                        w.prevBit += lr * grad * f.prevBit;
+                        w.nextBit += lr * grad * f.nextBit;
+                        w.prev2Bit += lr * grad * f.prev2Bit;
+                        w.runLength += lr * grad * f.runLength / d.maxBits;
+                        w.relativePos += lr * grad * f.relativePos;
+                        w.zeroAfterOnes += lr * grad * f.zeroAfterOnes;
+                        w.oneAfterZeros += lr * grad * f.oneAfterZeros;
+                        w.doubleZero += lr * grad * f.doubleZero;
+                        w.doubleOne += lr * grad * f.doubleOne;
+                        w.cumPopcount += lr * grad * f.cumPopcount / d.maxBits;
+                        w.isTransition += lr * grad * f.isTransition;
+                        w.maxOneRun += lr * grad * global.maxOneRun / d.maxBits;
+                        w.maxZeroRun += lr * grad * global.maxZeroRun / d.maxBits;
+                        w.bitClustering += lr * grad * global.bitClustering;
+                        w.trailingOnes += lr * grad * global.trailingOnes / d.maxBits;
+                    }
+                }
+            }
+            return w;
+        }
+        
+        function generateData(n, bits) {
+            const data = [];
+            const min = Math.pow(2, bits - 1);
+            const max = Math.pow(2, bits);
+            for (let i = 0; i < n; i++) {
+                const p = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                const q = randomPrime(Math.floor(Math.sqrt(min)), Math.floor(Math.sqrt(max)));
+                data.push(computeTrace(Math.min(p, q), Math.max(p, q)));
+            }
+            return data;
+        }
+        
+        function runSingleTrace() {
+            const trace = computeTrace(11, 13);
+            const global = extractGlobal(trace.N);
+            const w = { bias: 0.5, nBit: -2, prevBit: 1, nextBit: 0.5, prev2Bit: 0.3, runLength: 0.5, relativePos: 2, zeroAfterOnes: 3, oneAfterZeros: -2, doubleZero: 2, doubleOne: -1, cumPopcount: 1, isTransition: 1, maxOneRun: -2, maxZeroRun: 1, bitClustering: -2, trailingOnes: -1 };
+            
+            let html = '<div class="formula">';
+            html += `p = ${trace.p} = ${toBinary(trace.p)}\nq = ${trace.q} = ${toBinary(trace.q)}\nN = ${trace.N} = ${trace.nBin}\n`;
+            html += '</div>';
+            
+            const actual = trace.trace.map(t => t.carryOut > 0 ? 1 : 0);
+            const predicted = trace.trace.map((_, pos) => predictCarryML(trace.N, pos, trace.maxBits, global, w).prediction);
+            
+            let correct = 0;
+            for (let i = 0; i < actual.length; i++) if (actual[i] === predicted[i]) correct++;
+            
+            html += '<div class="reconstruction-row"><span class="reconstruction-label">Actual carries:</span><span class="bit-display">[' + actual.join(', ') + ']</span></div>';
+            html += '<div class="reconstruction-row"><span class="reconstruction-label">Predicted:</span><span class="bit-display">[' + predicted.join(', ') + ']</span></div>';
+            html += '<div class="reconstruction-row"><span class="reconstruction-label">Match:</span><span class="bit-display">[';
+            html += actual.map((a, i) => a === predicted[i] ? '<span class="bit-match">✓</span>' : '<span class="bit-miss">✗</span>').join(', ');
+            html += ']</span></div>';
+            
+            const acc = correct / actual.length;
+            html += `<div class="insight-box ${acc > 0.8 ? 'success' : ''}"><strong>Accuracy:</strong> ${(acc * 100).toFixed(1)}% (${correct}/${actual.length})</div>`;
+            
+            document.getElementById('singleTrace').style.display = 'block';
+            document.getElementById('singleTraceContent').innerHTML = html;
+        }
+        
+        function runReconstruction() {
+            const n = parseInt(document.getElementById('sampleSize').value);
+            const bits = parseInt(document.getElementById('bitRange').value);
+            const data = generateData(n, bits);
+            
+            const trainSize = Math.floor(n * 0.7);
+            const trainData = data.slice(0, trainSize);
+            const testData = data.slice(trainSize);
+            
+            const weights = learnWeights(trainData);
+            const maxBits = Math.max(...data.map(d => d.maxBits));
+            
+            let totalBits = 0, correctBits = 0, perfectSeqs = 0;
+            const posAcc = new Array(maxBits).fill(null).map(() => ({ c: 0, t: 0 }));
+            const sampleAccs = [];
+            
+            for (const d of testData) {
+                const global = extractGlobal(d.N);
+                let sampleCorrect = 0;
+                for (let pos = 0; pos < d.trace.length; pos++) {
+                    const actual = d.trace[pos].carryOut > 0 ? 1 : 0;
+                    const pred = predictCarryML(d.N, pos, d.maxBits, global, weights);
+                    totalBits++;
+                    if (pred.prediction === actual) { correctBits++; sampleCorrect++; }
+                    if (pos < maxBits) { posAcc[pos].t++; if (pred.prediction === actual) posAcc[pos].c++; }
+                }
+                const acc = sampleCorrect / d.trace.length;
+                sampleAccs.push(acc);
+                if (acc === 1.0) perfectSeqs++;
+            }
+            
+            const overallAcc = correctBits / totalBits;
+            const avgAcc = sampleAccs.reduce((a, b) => a + b, 0) / sampleAccs.length;
+            
+            let html = '<div class="stats-grid">';
+            html += `<div class="stat-card"><div class="stat-value ${overallAcc > 0.9 ? 'excellent' : overallAcc > 0.75 ? 'good' : ''}">${(overallAcc * 100).toFixed(1)}%</div><div class="stat-label">Bit Accuracy</div></div>`;
+            html += `<div class="stat-card"><div class="stat-value ${avgAcc > 0.9 ? 'excellent' : avgAcc > 0.75 ? 'good' : ''}">${(avgAcc * 100).toFixed(1)}%</div><div class="stat-label">Avg Sequence Acc</div></div>`;
+            html += `<div class="stat-card"><div class="stat-value ${perfectSeqs > 0 ? 'perfect' : ''}">${perfectSeqs}</div><div class="stat-label">Perfect Reconstructions</div></div>`;
+            html += `<div class="stat-card"><div class="stat-value">${testData.length}</div><div class="stat-label">Test Samples</div></div>`;
+            html += '</div>';
+            
+            html += '<h3>Progress Toward r = 1.0</h3>';
+            const color = overallAcc > 0.9 ? '#ff00ff' : overallAcc > 0.75 ? '#00ff88' : overallAcc > 0.6 ? '#ffc800' : '#ff4444';
+            html += `<div class="progress-bar"><div class="progress-fill" style="width: ${overallAcc * 100}%; background: linear-gradient(90deg, ${color}, ${color}88);">${(overallAcc * 100).toFixed(1)}%</div></div>`;
+            
+            html += `<div class="insight-box ${overallAcc > 0.85 ? 'success' : ''}">`;
+            if (overallAcc > 0.95) html += '<h3 class="perfect">🎯 NEAR-PERFECT RECONSTRUCTION</h3>The carry sequence is almost fully recoverable!';
+            else if (overallAcc > 0.85) html += `<h3 style="color:#00ff88;">Strong Reconstruction: ${(overallAcc*100).toFixed(1)}%</h3>Signal is strong. More features could push higher.`;
+            else if (overallAcc > 0.7) html += `<h3 style="color:#ffc800;">Moderate: ${(overallAcc*100).toFixed(1)}%</h3>Significant info recoverable, but gaps remain.`;
+            else html += `<h3 style="color:#ff4444;">Limited: ${(overallAcc*100).toFixed(1)}%</h3>Current features insufficient.`;
+            html += '</div>';
+            
+            if (perfectSeqs > 0) {
+                html += `<div class="insight-box success"><strong>⚡ ${perfectSeqs} PERFECT RECONSTRUCTIONS</strong><br>${((perfectSeqs/testData.length)*100).toFixed(1)}% of samples had PERFECT carry recovery!</div>`;
+            }
+            
+            document.getElementById('reconstructionResults').innerHTML = html;
+            
+            // Position accuracy
+            let posHtml = '<table><tr><th>Pos</th>';
+            for (let i = 0; i < Math.min(maxBits, 20); i++) posHtml += `<th>${i}</th>`;
+            posHtml += '</tr><tr><td>Acc</td>';
+            for (let i = 0; i < Math.min(maxBits, 20); i++) {
+                const acc = posAcc[i].t > 0 ? posAcc[i].c / posAcc[i].t : 0;
+                const cls = acc > 0.85 ? 'excellent' : acc > 0.7 ? 'good' : acc > 0.55 ? 'neutral' : 'bad';
+                posHtml += `<td class="${cls}">${(acc*100).toFixed(0)}%</td>`;
+            }
+            posHtml += '</tr></table>';
+            document.getElementById('positionAccuracy').innerHTML = posHtml;
+            
+            // Weights
+            let wHtml = '<table><tr><th>Feature</th><th>Weight</th></tr>';
+            Object.entries(weights).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).forEach(([k,v]) => {
+                const cls = Math.abs(v) > 1 ? 'good' : Math.abs(v) > 0.3 ? 'neutral' : '';
+                wHtml += `<tr><td>${k}</td><td class="${cls}">${v.toFixed(3)}</td></tr>`;
+            });
+            wHtml += '</table>';
+            document.getElementById('regressionResults').innerHTML = wHtml;
+            
+            // Info theory
+            let ones = 0, total = 0;
+            for (const d of data) for (const t of d.trace) { total++; if (t.carryOut > 0) ones++; }
+            const p1 = ones / total, p0 = 1 - p1;
+            const entropy = -(p1 > 0 ? p1 * Math.log2(p1) : 0) - (p0 > 0 ? p0 * Math.log2(p0) : 0);
+            const avgBits = data.reduce((s, d) => s + d.trace.length, 0) / data.length;
+            
+            let infoHtml = '<div class="stats-grid">';
+            infoHtml += `<div class="stat-card"><div class="stat-value">${(p1*100).toFixed(1)}%</div><div class="stat-label">Carry Prob</div></div>`;
+            infoHtml += `<div class="stat-card"><div class="stat-value">${entropy.toFixed(3)}</div><div class="stat-label">Entropy/bit</div></div>`;
+            infoHtml += `<div class="stat-card"><div class="stat-value">${(entropy * avgBits).toFixed(1)}</div><div class="stat-label">Total Entropy</div></div>`;
+            infoHtml += '</div>';
+            infoHtml += `<div class="insight-box info"><strong>We recover ${(overallAcc*100).toFixed(1)}% of ${(entropy*avgBits).toFixed(1)} bits of carry information.</strong><br>Is the remaining ${((1-overallAcc)*100).toFixed(1)}% fundamentally lost, or just not yet extracted?</div>`;
+            document.getElementById('informationTheory').innerHTML = infoHtml;
+            
+            // Ceiling
+            let ceilHtml = `<div class="insight-box ${overallAcc > 0.85 ? 'success' : ''}">`;
+            ceilHtml += `<h3>Current: ${(overallAcc*100).toFixed(1)}% | Target: 100% | Gap: ${((1-overallAcc)*100).toFixed(1)}%</h3><br>`;
+            if (overallAcc > 0.85) ceilHtml += 'The ceiling is NOT at r = 0.6. Higher reconstruction IS possible.<br>Next: Neural networks, sequence models, more features.';
+            else ceilHtml += 'More work needed to find the true ceiling.';
+            ceilHtml += '</div>';
+            ceilHtml += '<div class="formula">THE PATH TO FACTORING\n\nN → extract carries → compute onesFromPP → polynomial factoring → p, q\n\nCurrent reconstruction: ' + (overallAcc*100).toFixed(1) + '%\nPerfect sequences: ' + perfectSeqs + '/' + testData.length + '</div>';
+            document.getElementById('ceilingAnalysis').innerHTML = ceilHtml;
+        }
+    </script>
+</body>
+</html>

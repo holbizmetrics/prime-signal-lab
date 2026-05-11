@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Addition vs Multiplication: Information Preservation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #ffaa00; margin-bottom: 10px; font-size: 1.4em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.85em; }
+        
+        .controls {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 12px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.75em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 6px 10px; border-radius: 4px; width: 100px; font-family: inherit;
+        }
+        
+        button {
+            background: #ffaa00; color: #000; border: none; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #ffcc44; }
+        button.secondary { background: #444; color: #fff; }
+        button.mega { 
+            background: linear-gradient(135deg, #ffaa00, #ff00ff); 
+            padding: 12px 24px; font-size: 1em;
+        }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 15px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #ffaa00; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #00aaff; font-size: 0.9em; margin: 12px 0 8px 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #222; }
+        th { color: #666; }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; font-weight: bold; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00ff; font-weight: bold; }
+        .hl-cyan { color: #00ffff; font-weight: bold; }
+        
+        .finding {
+            background: #1a1100; padding: 12px; margin: 10px 0;
+            border-radius: 6px; border-left: 3px solid #ffaa00; font-size: 0.9em;
+        }
+        .finding.good { border-left-color: #00ff88; background: #001a11; }
+        .finding.bad { border-left-color: #ff4444; background: #1a0000; }
+        .finding.critical { border-left-color: #ff00ff; background: #1a001a; }
+        .finding.discovery { border-left-color: #00ffff; background: #001a1a; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .mega-result {
+            text-align: center; padding: 25px; margin: 15px 0;
+            background: linear-gradient(135deg, #1a1100, #1a001a);
+            border-radius: 8px; border: 2px solid #ffaa00;
+        }
+        .mega-result .value {
+            font-size: 2.5em; font-weight: bold;
+            background: linear-gradient(135deg, #ffaa00, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .mega-result .label { font-size: 0.85em; color: #888; margin-top: 5px; }
+        
+        .comparison-box {
+            display: flex; gap: 20px; justify-content: center;
+            flex-wrap: wrap; margin: 20px 0;
+        }
+        .op-box {
+            padding: 20px 30px; border-radius: 12px; text-align: center;
+            min-width: 200px;
+        }
+        .op-box.multiply { background: #330000; border: 2px solid #ff4444; }
+        .op-box.add { background: #003300; border: 2px solid #00ff88; }
+        .op-box .symbol { font-size: 2em; margin-bottom: 10px; }
+        .op-box .name { font-size: 0.9em; color: #888; }
+        .op-box .info { font-size: 1.2em; font-weight: bold; margin-top: 10px; }
+        
+        .code-block {
+            background: #000; padding: 12px; border-radius: 4px;
+            font-family: monospace; font-size: 0.8em; margin: 10px 0;
+            border-left: 2px solid #ffaa00; overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .info-bar {
+            height: 30px; background: #222; border-radius: 4px;
+            margin: 8px 0; position: relative; overflow: hidden;
+        }
+        .info-fill { height: 100%; transition: width 0.5s; }
+        .info-fill.high { background: linear-gradient(90deg, #00aa00, #00ff00); }
+        .info-fill.medium { background: linear-gradient(90deg, #aaaa00, #ffff00); }
+        .info-fill.low { background: linear-gradient(90deg, #aa0000, #ff0000); }
+        .info-label {
+            position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        .info-value {
+            position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+            font-size: 0.8em; font-weight: bold;
+        }
+        
+        #status { text-align: center; padding: 10px; color: #888; }
+        
+        .vs-display {
+            display: flex; align-items: center; justify-content: center;
+            gap: 20px; font-size: 1.5em; margin: 20px 0;
+        }
+        .vs-display .vs { color: #666; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <h1>⚔️ Addition vs Multiplication</h1>
+    <p class="subtitle">Which operation preserves more factor information?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Sample Size</label>
+            <input type="number" id="sampleSize" value="200">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="mega" onclick="runComparison()">⚔️ COMPARE OPERATIONS</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="singleExample()">🔍 Single Example</button>
+        </div>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997,
+            1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+            1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163
+        ];
+        
+        function popcount(n) {
+            let c = 0;
+            while (n) { c += n & 1; n >>>= 1; }
+            return c;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        function toBits(n, width) {
+            return n.toString(2).padStart(width || 24, '0');
+        }
+        
+        // Count carries in addition
+        function countAdditionCarries(a, b) {
+            let carries = 0;
+            let carry = 0;
+            while (a > 0 || b > 0 || carry > 0) {
+                const sum = (a & 1) + (b & 1) + carry;
+                carry = sum >> 1;
+                carries += carry;
+                a >>= 1;
+                b >>= 1;
+            }
+            return carries;
+        }
+        
+        // Count carries in multiplication (approximate)
+        function countMultiplicationCarries(p, q) {
+            let totalCarries = 0;
+            let runningSum = 0;
+            
+            const qBits = q.toString(2);
+            for (let i = 0; i < qBits.length; i++) {
+                if (qBits[qBits.length - 1 - i] === '1') {
+                    const partial = p << i;
+                    totalCarries += countAdditionCarries(runningSum, partial);
+                    runningSum += partial;
+                }
+            }
+            return totalCarries;
+        }
+        
+        // XOR sum for multiplication
+        function multiplicationXorSum(p, q) {
+            let xorSum = 0;
+            const qBits = q.toString(2);
+            for (let i = 0; i < qBits.length; i++) {
+                if (qBits[qBits.length - 1 - i] === '1') {
+                    xorSum ^= (p << i);
+                }
+            }
+            return xorSum;
+        }
+        
+        // XOR sum for addition (just XOR)
+        function additionXorSum(p, q) {
+            return p ^ q;
+        }
+        
+        function correlation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length < 3) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        async function runComparison() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value) || 200;
+            const statusEl = document.getElementById('status');
+            
+            statusEl.innerHTML = 'Generating samples...';
+            await sleep(50);
+            
+            // Generate samples with variety
+            const samples = [];
+            const balancedCount = Math.floor(sampleSize * 0.5);
+            
+            for (let i = 0; i < balancedCount; i++) {
+                const idx = Math.floor(Math.random() * (testPrimes.length - 8)) + 5;
+                const p = testPrimes[idx];
+                const q = testPrimes[idx + Math.floor(Math.random() * 4) + 1];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            for (let i = balancedCount; i < sampleSize; i++) {
+                const p = testPrimes[Math.floor(Math.random() * 35)];
+                const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 35)];
+                samples.push([Math.min(p, q), Math.max(p, q)]);
+            }
+            
+            statusEl.innerHTML = 'Computing operations...';
+            await sleep(50);
+            
+            // Compute all values
+            const data = {
+                p: [], q: [],
+                N: [], S: [],  // Product, Sum
+                N_xor: [], S_xor: [],  // XOR components
+                N_carry: [], S_carry: [],  // Carry residues
+                N_carryCount: [], S_carryCount: [],  // Number of carries
+                balance: [], diff: [], ratio: []
+            };
+            
+            for (const [p, q] of samples) {
+                data.p.push(p);
+                data.q.push(q);
+                
+                const N = p * q;
+                const S = p + q;
+                
+                data.N.push(N);
+                data.S.push(S);
+                
+                const N_xor = multiplicationXorSum(p, q);
+                const S_xor = additionXorSum(p, q);
+                
+                data.N_xor.push(N_xor);
+                data.S_xor.push(S_xor);
+                
+                data.N_carry.push(N - N_xor);
+                data.S_carry.push(S - S_xor);
+                
+                data.N_carryCount.push(countMultiplicationCarries(p, q));
+                data.S_carryCount.push(countAdditionCarries(p, q));
+                
+                const sqrtN = Math.sqrt(N);
+                data.balance.push((p + q) / (2 * sqrtN));
+                data.diff.push(Math.abs(p - q));
+                data.ratio.push(q / p);
+            }
+            
+            statusEl.innerHTML = 'Analyzing information preservation...';
+            await sleep(50);
+            
+            // THE KEY ANALYSIS
+            // How well can we predict factor properties from each operation's result?
+            
+            const analysis = {
+                multiplication: {},
+                addition: {}
+            };
+            
+            // From N (multiplication result)
+            analysis.multiplication = {
+                // Can N predict balance?
+                N_vs_balance: correlation(data.N, data.balance),
+                N_pop_vs_balance: correlation(data.N.map(popcount), data.balance),
+                N_gap_vs_balance: correlation(data.N.map(n => n - Math.floor(Math.sqrt(n))**2), data.balance),
+                
+                // Can N predict diff?
+                N_vs_diff: correlation(data.N, data.diff),
+                N_gap_vs_diff: correlation(data.N.map(n => n - Math.floor(Math.sqrt(n))**2), data.diff),
+                
+                // Can N predict sum (which would let us factor)?
+                N_vs_S: correlation(data.N, data.S),
+                N_sqrt_vs_S: correlation(data.N.map(n => 2 * Math.sqrt(n)), data.S),
+                
+                // Carry statistics
+                avgCarries: data.N_carryCount.reduce((a,b) => a+b, 0) / sampleSize,
+                carryRatio: data.N_carry.reduce((a,b) => a+b, 0) / data.N.reduce((a,b) => a+b, 0)
+            };
+            
+            // From S (addition result)
+            analysis.addition = {
+                // S directly encodes balance!
+                S_vs_balance: correlation(data.S, data.balance),
+                S_pop_vs_balance: correlation(data.S.map(popcount), data.balance),
+                
+                // S vs diff?
+                S_vs_diff: correlation(data.S, data.diff),
+                
+                // Can S + N together solve factoring?
+                // p + q = S, p * q = N
+                // p, q = (S ± sqrt(S² - 4N)) / 2
+                discriminant_exists: data.S.every((s, i) => s*s >= 4*data.N[i]),
+                
+                // Carry statistics
+                avgCarries: data.S_carryCount.reduce((a,b) => a+b, 0) / sampleSize,
+                carryRatio: data.S_carry.reduce((a,b) => a+b, 0) / data.S.reduce((a,b) => a+b, 0)
+            };
+            
+            // THE BIG QUESTION: Can we estimate S from N?
+            statusEl.innerHTML = 'Testing S estimation from N...';
+            await sleep(50);
+            
+            const sEstimation = testSumEstimation(data);
+            
+            statusEl.innerHTML = '';
+            renderResults(analysis, sEstimation, data, sampleSize);
+        }
+        
+        function testSumEstimation(data) {
+            // Various methods to estimate S from N
+            const methods = [];
+            
+            // Method 1: 2√N (perfect for balanced factors)
+            const est1 = data.N.map(n => 2 * Math.sqrt(n));
+            methods.push({
+                name: '2√N',
+                estimates: est1,
+                corr: correlation(est1, data.S),
+                avgError: avgRelError(est1, data.S)
+            });
+            
+            // Method 2: Fermat-adjusted
+            const est2 = data.N.map(n => {
+                const sqrt = Math.sqrt(n);
+                const gap = n - Math.floor(sqrt) ** 2;
+                return 2 * sqrt + gap / (2 * sqrt);
+            });
+            methods.push({
+                name: 'Fermat-adjusted',
+                estimates: est2,
+                corr: correlation(est2, data.S),
+                avgError: avgRelError(est2, data.S)
+            });
+            
+            // Method 3: Using N's bit pattern
+            const est3 = data.N.map(n => {
+                const bits = bitLength(n);
+                const pop = popcount(n);
+                // Heuristic: more bits spread = more unbalanced = higher S
+                return 2 * Math.sqrt(n) * (1 + pop / bits * 0.1);
+            });
+            methods.push({
+                name: 'Bit-pattern adjusted',
+                estimates: est3,
+                corr: correlation(est3, data.S),
+                avgError: avgRelError(est3, data.S)
+            });
+            
+            // Method 4: Mod-based hints
+            const est4 = data.N.map(n => {
+                const sqrt = Math.sqrt(n);
+                const mod3 = n % 3;
+                const mod4 = n % 4;
+                // Factors mod constraints might hint at sum
+                return 2 * sqrt;
+            });
+            methods.push({
+                name: 'Modular hints',
+                estimates: est4,
+                corr: correlation(est4, data.S),
+                avgError: avgRelError(est4, data.S)
+            });
+            
+            // Method 5: High/low half of N
+            const est5 = data.N.map(n => {
+                const bits = bitLength(n);
+                const half = Math.floor(bits / 2);
+                const high = n >> half;
+                const low = n & ((1 << half) - 1);
+                // Some combination?
+                return 2 * Math.sqrt(n) + (high - low) / Math.sqrt(n) * 0.1;
+            });
+            methods.push({
+                name: 'High-low analysis',
+                estimates: est5,
+                corr: correlation(est5, data.S),
+                avgError: avgRelError(est5, data.S)
+            });
+            
+            return methods;
+        }
+        
+        function avgRelError(est, actual) {
+            let sum = 0;
+            for (let i = 0; i < est.length; i++) {
+                sum += Math.abs(est[i] - actual[i]) / actual[i];
+            }
+            return sum / est.length;
+        }
+        
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+        
+        function renderResults(analysis, sEstimation, data, sampleSize) {
+            let html = '';
+            
+            // Header
+            html += `<div class="panel">`;
+            html += `<h2>⚔️ Addition vs Multiplication: Information Battle</h2>`;
+            html += `</div>`;
+            
+            // The comparison boxes
+            html += `<div class="comparison-box">`;
+            
+            html += `<div class="op-box multiply">`;
+            html += `<div class="symbol">×</div>`;
+            html += `<div class="name">Multiplication (N = p × q)</div>`;
+            html += `<div class="info">${analysis.multiplication.avgCarries.toFixed(1)} avg carries</div>`;
+            html += `<div style="font-size:0.8em;color:#ff8888;">${(analysis.multiplication.carryRatio * 100).toFixed(1)}% carry contribution</div>`;
+            html += `</div>`;
+            
+            html += `<div class="op-box add">`;
+            html += `<div class="symbol">+</div>`;
+            html += `<div class="name">Addition (S = p + q)</div>`;
+            html += `<div class="info">${analysis.addition.avgCarries.toFixed(1)} avg carries</div>`;
+            html += `<div style="font-size:0.8em;color:#88ff88;">${(analysis.addition.carryRatio * 100).toFixed(1)}% carry contribution</div>`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Carry comparison
+            const carryRatio = analysis.multiplication.avgCarries / analysis.addition.avgCarries;
+            
+            html += `<div class="mega-result">`;
+            html += `<div class="value">${carryRatio.toFixed(1)}×</div>`;
+            html += `<div class="label">Multiplication has ${carryRatio.toFixed(1)}× more carries than addition!</div>`;
+            html += `</div>`;
+            
+            // Information preservation comparison
+            html += `<div class="panel">`;
+            html += `<h2>📊 Information Preservation Comparison</h2>`;
+            
+            html += `<h3>Can we predict BALANCE from each operation?</h3>`;
+            
+            html += `<div class="info-bar">`;
+            const multBalCorr = Math.abs(analysis.multiplication.N_gap_vs_balance);
+            html += `<div class="info-fill ${multBalCorr > 0.5 ? 'high' : 'medium'}" style="width: ${multBalCorr * 100}%"></div>`;
+            html += `<span class="info-label">From N (multiplication)</span>`;
+            html += `<span class="info-value">r = ${multBalCorr.toFixed(4)}</span>`;
+            html += `</div>`;
+            
+            html += `<div class="info-bar">`;
+            const addBalCorr = Math.abs(analysis.addition.S_vs_balance);
+            html += `<div class="info-fill ${addBalCorr > 0.5 ? 'high' : 'medium'}" style="width: ${Math.min(addBalCorr * 100, 100)}%"></div>`;
+            html += `<span class="info-label">From S (addition)</span>`;
+            html += `<span class="info-value">r = ${addBalCorr.toFixed(4)}</span>`;
+            html += `</div>`;
+            
+            html += `<h3>Can we predict FACTOR DIFFERENCE?</h3>`;
+            
+            html += `<div class="info-bar">`;
+            const multDiffCorr = Math.abs(analysis.multiplication.N_gap_vs_diff);
+            html += `<div class="info-fill ${multDiffCorr > 0.5 ? 'high' : 'low'}" style="width: ${multDiffCorr * 100}%"></div>`;
+            html += `<span class="info-label">From N</span>`;
+            html += `<span class="info-value">r = ${multDiffCorr.toFixed(4)}</span>`;
+            html += `</div>`;
+            
+            html += `<div class="info-bar">`;
+            const addDiffCorr = Math.abs(analysis.addition.S_vs_diff);
+            html += `<div class="info-fill ${addDiffCorr > 0.5 ? 'high' : 'low'}" style="width: ${addDiffCorr * 100}%"></div>`;
+            html += `<span class="info-label">From S</span>`;
+            html += `<span class="info-value">r = ${addDiffCorr.toFixed(4)}</span>`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // THE KEY INSIGHT
+            html += `<div class="panel">`;
+            html += `<h2>🔑 The Key Insight</h2>`;
+            
+            html += `<div class="code-block">`;
+            html += `S = p + q  DIRECTLY ENCODES THE SUM!
+
+Balance ratio = (p + q) / (2√N) = S / (2√N)
+
+If we know S and N:
+  p + q = S
+  p × q = N
+  
+  Quadratic: x² - Sx + N = 0
+  p, q = (S ± √(S² - 4N)) / 2
+
+S contains EXACTLY the information needed to factor N!`;
+            html += `</div>`;
+            
+            html += `<div class="finding good">`;
+            html += `<strong>✓ S preserves 100% of sum information</strong><br>`;
+            html += `No carry avalanche can destroy this — S IS the sum!`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Can we estimate S from N?
+            html += `<div class="panel">`;
+            html += `<h2>🎯 THE CRITICAL QUESTION: Can We Estimate S From N?</h2>`;
+            
+            html += `<table>`;
+            html += `<tr><th>Method</th><th>r(estimate, S)</th><th>Avg Error</th></tr>`;
+            
+            sEstimation.sort((a, b) => Math.abs(b.corr) - Math.abs(a.corr));
+            
+            for (const m of sEstimation) {
+                const color = Math.abs(m.corr) > 0.95 ? 'hl-green' : Math.abs(m.corr) > 0.8 ? 'hl-yellow' : '';
+                html += `<tr>`;
+                html += `<td>${m.name}</td>`;
+                html += `<td class="${color}">${m.corr.toFixed(4)}</td>`;
+                html += `<td>${(m.avgError * 100).toFixed(2)}%</td>`;
+                html += `</tr>`;
+            }
+            html += `</table>`;
+            
+            const bestCorr = Math.max(...sEstimation.map(m => Math.abs(m.corr)));
+            const bestError = Math.min(...sEstimation.map(m => m.avgError));
+            
+            html += `<div class="finding ${bestCorr > 0.99 ? 'good' : bestCorr > 0.95 ? '' : 'bad'}">`;
+            html += `<strong>Best S estimation from N:</strong><br>`;
+            html += `• Correlation: r = ${bestCorr.toFixed(4)}<br>`;
+            html += `• Average error: ${(bestError * 100).toFixed(2)}%<br><br>`;
+            
+            if (bestCorr > 0.99) {
+                html += `<span class="hl-green">S is almost perfectly predictable from N!</span>`;
+            } else if (bestCorr > 0.95) {
+                html += `<span class="hl-yellow">Good correlation but error may be too high for exact factoring.</span>`;
+            } else {
+                html += `<span class="hl-red">Cannot reliably estimate S from N alone.</span>`;
+            }
+            html += `</div>`;
+            
+            // The mathematical limit
+            html += `<div class="code-block">`;
+            html += `For factoring, we need S EXACTLY (or within ±1).
+
+2√N gives us S estimate with error ≈ |p-q|²/(8N)
+
+For balanced factors (p ≈ q): Error → 0, 2√N ≈ S ✓
+For unbalanced factors: Error grows with (q/p - 1)²
+
+The SAME information that makes factors unbalanced
+ALSO makes S harder to estimate from N.
+
+This is the circularity: 
+  Knowing balance → Know S approximately
+  Knowing S exactly → Can factor
+  Can't know balance exactly without factoring`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Why addition doesn't help
+            html += `<div class="panel">`;
+            html += `<h2>💀 Why Addition Doesn't Help Us</h2>`;
+            
+            html += `<div class="finding bad">`;
+            html += `<strong>The Cruel Irony:</strong><br><br>`;
+            html += `• Addition PERFECTLY preserves sum information<br>`;
+            html += `• S = p + q contains exactly what we need<br>`;
+            html += `• BUT: We don't HAVE S, we only have N!<br><br>`;
+            html += `• Multiplication destroys sum information<br>`;
+            html += `• N = p × q doesn't directly encode p + q<br>`;
+            html += `• The relationship S ↔ N is exactly the factoring problem`;
+            html += `</div>`;
+            
+            html += `<div class="finding critical">`;
+            html += `<strong>The Fundamental Asymmetry:</strong><br><br>`;
+            html += `FORWARD: Given p, q → compute N, S trivially<br>`;
+            html += `REVERSE: Given N → find S requires solving for p, q<br><br>`;
+            html += `Addition's simplicity doesn't help because we START with multiplication's result.`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function singleExample() {
+            const p = 727, q = 743;
+            const N = p * q;
+            const S = p + q;
+            
+            const N_xor = multiplicationXorSum(p, q);
+            const S_xor = additionXorSum(p, q);
+            
+            const N_carries = countMultiplicationCarries(p, q);
+            const S_carries = countAdditionCarries(p, q);
+            
+            let html = `<div class="panel">`;
+            html += `<h2>🔍 Single Example: p = ${p}, q = ${q}</h2>`;
+            
+            html += `<div class="grid-2">`;
+            
+            html += `<div class="op-box multiply" style="margin:10px;">`;
+            html += `<div class="symbol">×</div>`;
+            html += `<div>N = ${N}</div>`;
+            html += `<div style="font-size:0.8em;">XOR: ${N_xor}</div>`;
+            html += `<div style="font-size:0.8em;">Carry: ${N - N_xor}</div>`;
+            html += `<div style="font-size:0.8em;">Carry events: ${N_carries}</div>`;
+            html += `</div>`;
+            
+            html += `<div class="op-box add" style="margin:10px;">`;
+            html += `<div class="symbol">+</div>`;
+            html += `<div>S = ${S}</div>`;
+            html += `<div style="font-size:0.8em;">XOR: ${S_xor}</div>`;
+            html += `<div style="font-size:0.8em;">Carry: ${S - S_xor}</div>`;
+            html += `<div style="font-size:0.8em;">Carry events: ${S_carries}</div>`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            // Factoring from S
+            html += `<div class="finding good">`;
+            html += `<strong>Factoring from S + N:</strong><br>`;
+            html += `p, q = (${S} ± √(${S}² - 4×${N})) / 2<br>`;
+            html += `p, q = (${S} ± √(${S*S} - ${4*N})) / 2<br>`;
+            html += `p, q = (${S} ± √${S*S - 4*N}) / 2<br>`;
+            html += `p, q = (${S} ± ${Math.sqrt(S*S - 4*N)}) / 2<br>`;
+            html += `p = ${(S - Math.sqrt(S*S - 4*N)) / 2}, q = ${(S + Math.sqrt(S*S - 4*N)) / 2}`;
+            html += `</div>`;
+            
+            // Estimation
+            const estS = 2 * Math.sqrt(N);
+            const error = Math.abs(estS - S) / S * 100;
+            
+            html += `<div class="finding ${error < 1 ? 'good' : 'bad'}">`;
+            html += `<strong>Estimating S from N:</strong><br>`;
+            html += `2√N = ${estS.toFixed(4)}<br>`;
+            html += `Actual S = ${S}<br>`;
+            html += `Error: ${error.toFixed(4)}%`;
+            html += `</div>`;
+            
+            html += `</div>`;
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initial
+        document.getElementById('results').innerHTML = `
+            <div class="panel">
+                <h2>⚔️ The Battle</h2>
+                <div class="code-block">
+MULTIPLICATION: N = p × q
+  - Many partial products
+  - Many carry chains
+  - Massive information destruction
+
+ADDITION: S = p + q  
+  - Single addition
+  - One carry chain
+  - Should preserve much more info!
+
+QUESTION: Can addition's simplicity help us factor?
+                </div>
+                <p style="margin-top:15px;">Click <strong>⚔️ COMPARE OPERATIONS</strong> to find out!</p>
+            </div>
+        `;
+    </script>
+</body>
+</html>

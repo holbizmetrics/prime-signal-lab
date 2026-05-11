@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boolean Multiplication Observatory</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 { text-align: center; color: #00ff88; margin-bottom: 10px; font-size: 1.5em; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.9em; }
+        
+        .controls {
+            display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 15px; background: #111; border-radius: 8px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.8em; color: #888; }
+        
+        input[type="number"] {
+            background: #1a1a2e; border: 1px solid #333; color: #fff;
+            padding: 8px 12px; border-radius: 4px; width: 120px; font-family: inherit;
+        }
+        
+        button {
+            background: #00ff88; color: #000; border: none; padding: 10px 20px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        button:hover { background: #44ffaa; }
+        button.secondary { background: #444; color: #fff; }
+        button.secondary:hover { background: #666; }
+        
+        .panel {
+            background: #111; border-radius: 8px; padding: 15px;
+            margin-bottom: 20px; border: 1px solid #222;
+        }
+        .panel h2 {
+            color: #00ff88; font-size: 1em; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+        .panel h3 { color: #00aaff; font-size: 0.95em; margin: 15px 0 10px 0; }
+        
+        .algorithm-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px;
+        }
+        
+        .algorithm-card {
+            background: #0a0a15; border: 1px solid #333; border-radius: 8px; padding: 12px;
+        }
+        .algorithm-card h3 { margin-top: 0; color: #ffaa00; font-size: 0.95em; margin-bottom: 8px; }
+        .algorithm-card.highlight { border-color: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.2); }
+        
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+        th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #888; }
+        
+        .code-block {
+            background: #000; padding: 10px; border-radius: 4px;
+            font-family: monospace; white-space: pre; overflow-x: auto;
+            font-size: 0.75em; line-height: 1.3; margin: 8px 0;
+        }
+        
+        .hl-green { color: #00ff88; font-weight: bold; }
+        .hl-yellow { color: #ffaa00; font-weight: bold; }
+        .hl-red { color: #ff4444; }
+        .hl-blue { color: #00aaff; }
+        .hl-pink { color: #ff00aa; font-weight: bold; }
+        .hl-cyan { color: #00ffff; }
+        
+        .finding {
+            background: #002244; padding: 12px; margin: 12px 0;
+            border-radius: 8px; border-left: 3px solid #00aaff;
+        }
+        .finding.positive { border-left-color: #00ff88; background: #002211; }
+        .finding.negative { border-left-color: #ff4444; background: #220011; }
+        .finding.discovery { border-left-color: #ff00aa; background: #220022; }
+        
+        .bit-visual {
+            font-family: monospace; background: #000; padding: 8px;
+            border-radius: 4px; margin: 5px 0; font-size: 0.8em;
+        }
+        
+        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; margin: 10px 0; }
+        .stat-box {
+            background: #1a1a2e; padding: 8px 12px; border-radius: 4px;
+            text-align: center; min-width: 80px;
+        }
+        .stat-value { font-size: 1.2em; font-weight: bold; color: #00ffaa; }
+        .stat-label { font-size: 0.7em; color: #888; }
+        
+        .correlation-bar {
+            height: 20px; background: #222; border-radius: 3px;
+            margin: 3px 0; position: relative; overflow: hidden;
+        }
+        .correlation-fill {
+            height: 100%; position: absolute; left: 50%;
+            transition: width 0.3s, background 0.3s;
+        }
+        .correlation-fill.positive { background: #00aa44; transform: translateX(0); }
+        .correlation-fill.negative { background: #aa4400; transform: translateX(-100%); }
+    </style>
+</head>
+<body>
+    <h1>🔌 Boolean Multiplication Observatory</h1>
+    <p class="subtitle">AND, OR, XOR — What signals hide in the bits?</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Prime p</label>
+            <input type="number" id="primeP" value="163">
+        </div>
+        <div class="control-group">
+            <label>Prime q</label>
+            <input type="number" id="primeQ" value="167">
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button onclick="analyze()">🔬 Analyze</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomBalanced()">⚖️ Balanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="randomUnbalanced()">📐 Unbalanced</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="batchTest()">📊 Batch (100)</button>
+        </div>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const testPrimes = [
+            11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+            101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+            211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293,
+            307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397,
+            401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499,
+            503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599,
+            601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691,
+            701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+            809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883,
+            907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997
+        ];
+        
+        function randomBalanced() {
+            const idx = Math.floor(Math.random() * (testPrimes.length - 5)) + 10;
+            document.getElementById('primeP').value = testPrimes[idx];
+            document.getElementById('primeQ').value = testPrimes[idx + Math.floor(Math.random() * 3) + 1];
+            analyze();
+        }
+        
+        function randomUnbalanced() {
+            const p = testPrimes[Math.floor(Math.random() * 20)];
+            const q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 20)];
+            document.getElementById('primeP').value = Math.min(p, q);
+            document.getElementById('primeQ').value = Math.max(p, q);
+            analyze();
+        }
+        
+        // Bit utilities
+        function toBits(n, width = null) {
+            const bits = n.toString(2).split('').map(Number);
+            if (width && bits.length < width) {
+                return new Array(width - bits.length).fill(0).concat(bits);
+            }
+            return bits;
+        }
+        
+        function popcount(n) {
+            let count = 0;
+            while (n) { count += n & 1; n >>>= 1; }
+            return count;
+        }
+        
+        function bitLength(n) {
+            return n === 0 ? 1 : Math.floor(Math.log2(n)) + 1;
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 1: Binary Long Multiplication
+        // Shows AND gates + carry chains explicitly
+        // ============================================
+        function binaryLongMultiply(p, q) {
+            const pBits = toBits(p);
+            const qBits = toBits(q);
+            const width = pBits.length + qBits.length;
+            
+            // Partial products: each is p AND'd with one bit of q, shifted
+            const partials = [];
+            let totalAnds = 0;
+            
+            for (let i = qBits.length - 1; i >= 0; i--) {
+                const shift = qBits.length - 1 - i;
+                const qBit = qBits[i];
+                
+                if (qBit === 1) {
+                    // AND p with 1 = p (shifted)
+                    const partial = p << shift;
+                    partials.push({ shift, value: partial, bits: toBits(partial) });
+                    totalAnds += popcount(p); // Number of 1-bits ANDed
+                }
+            }
+            
+            // Binary addition of partials
+            // Count carry chain length
+            let sum = 0;
+            let totalCarryChain = 0;
+            let maxCarryPropagation = 0;
+            
+            for (const partial of partials) {
+                const before = sum;
+                sum += partial.value;
+                
+                // XOR gives sum bits, AND gives carry bits
+                const xorResult = before ^ partial.value;
+                const andResult = before & partial.value;
+                
+                // Carry propagation length
+                let carry = andResult << 1;
+                let propagation = 0;
+                while (carry & xorResult) {
+                    carry = (carry & xorResult) << 1;
+                    propagation++;
+                }
+                totalCarryChain += propagation;
+                maxCarryPropagation = Math.max(maxCarryPropagation, propagation);
+            }
+            
+            return {
+                name: 'Binary Long (AND + Shift + Add)',
+                result: p * q,
+                partials,
+                numPartials: partials.length,
+                totalAnds,
+                totalCarryChain,
+                maxCarryPropagation,
+                pPopcount: popcount(p),
+                qPopcount: popcount(q),
+                productPopcount: popcount(p * q)
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 2: XOR Analysis
+        // XOR is addition without carry - what's lost?
+        // ============================================
+        function xorAnalysis(p, q) {
+            const N = p * q;
+            
+            // Various XOR combinations
+            const pXorQ = p ^ q;
+            const pAndQ = p & q;
+            const pOrQ = p | q;
+            
+            // XOR "multiplication" (not real mult, but interesting)
+            // Carryless multiplication (like in GF(2^n))
+            let carrylessMult = 0;
+            let temp = q;
+            let shift = 0;
+            while (temp) {
+                if (temp & 1) {
+                    carrylessMult ^= (p << shift);
+                }
+                temp >>>= 1;
+                shift++;
+            }
+            
+            // How different is carryless from real multiplication?
+            const multDiff = N ^ carrylessMult;
+            const diffPopcount = popcount(multDiff);
+            
+            // The difference IS the carry information!
+            // diffPopcount tells us how much "carrying" happened
+            
+            return {
+                name: 'XOR Analysis (Carryless)',
+                result: N,
+                pXorQ,
+                pAndQ,
+                pOrQ,
+                carrylessMult,
+                realProduct: N,
+                difference: multDiff,
+                // KEY: difference between XOR-mult and real mult
+                diffPopcount,
+                diffRatio: diffPopcount / bitLength(N),
+                // XOR properties
+                xorPopcount: popcount(pXorQ),
+                andPopcount: popcount(pAndQ),
+                orPopcount: popcount(pOrQ),
+                // Bit overlap
+                bitOverlap: popcount(pAndQ) / Math.min(popcount(p), popcount(q))
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 3: Booth's Algorithm
+        // Uses signed digit representation, -1/0/+1
+        // ============================================
+        function boothAnalysis(p, q) {
+            // Booth encoding of q: look at pairs of bits
+            // 00 -> 0, 01 -> +1, 10 -> -1, 11 -> 0
+            const qBits = toBits(q);
+            qBits.push(0); // Append 0 for Booth
+            
+            const boothDigits = [];
+            let additions = 0;
+            let subtractions = 0;
+            
+            for (let i = qBits.length - 1; i > 0; i--) {
+                const curr = qBits[i];
+                const prev = qBits[i - 1];
+                
+                if (curr === 0 && prev === 1) {
+                    boothDigits.unshift(1);  // +1
+                    additions++;
+                } else if (curr === 1 && prev === 0) {
+                    boothDigits.unshift(-1); // -1
+                    subtractions++;
+                } else {
+                    boothDigits.unshift(0);  // 0
+                }
+            }
+            
+            // Booth reduces operations by encoding runs of 1s
+            // e.g., 0111 = 1000 - 0001 = one sub instead of three adds
+            
+            return {
+                name: "Booth's Algorithm",
+                result: p * q,
+                boothDigits,
+                additions,
+                subtractions,
+                totalOps: additions + subtractions,
+                // Key insight: Booth ops relate to bit transitions in q
+                transitions: additions + subtractions,
+                transitionDensity: (additions + subtractions) / bitLength(q),
+                runsOfOnes: countRuns(q),
+                longestRun: longestRun(q)
+            };
+        }
+        
+        function countRuns(n) {
+            const bits = n.toString(2);
+            return (bits.match(/1+/g) || []).length;
+        }
+        
+        function longestRun(n) {
+            const bits = n.toString(2);
+            const runs = bits.match(/1+/g) || [''];
+            return Math.max(...runs.map(r => r.length));
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 4: Carry-Save Analysis
+        // Separate sum and carry bits
+        // ============================================
+        function carrySaveAnalysis(p, q) {
+            const pBits = toBits(p);
+            const qBits = toBits(q);
+            const width = pBits.length + qBits.length;
+            
+            // Generate all partial products
+            const partials = [];
+            for (let i = 0; i < qBits.length; i++) {
+                if (qBits[qBits.length - 1 - i]) {
+                    partials.push(p << i);
+                }
+            }
+            
+            // Carry-save addition: reduce 3 numbers to 2
+            // Track how many CSA stages needed
+            let numbers = [...partials];
+            let csaStages = 0;
+            let totalCarrySavePairs = 0;
+            
+            while (numbers.length > 2) {
+                const newNumbers = [];
+                
+                while (numbers.length >= 3) {
+                    const a = numbers.pop();
+                    const b = numbers.pop();
+                    const c = numbers.pop();
+                    
+                    // CSA: sum = a XOR b XOR c, carry = (a&b)|(b&c)|(a&c) shifted
+                    const sum = a ^ b ^ c;
+                    const carry = ((a & b) | (b & c) | (a & c)) << 1;
+                    
+                    newNumbers.push(sum, carry);
+                    totalCarrySavePairs++;
+                }
+                
+                // Leftover 1 or 2 numbers pass through
+                newNumbers.push(...numbers);
+                numbers = newNumbers;
+                csaStages++;
+            }
+            
+            // Final CPA (carry-propagate add)
+            const finalSum = numbers.reduce((a, b) => a + b, 0);
+            
+            return {
+                name: 'Carry-Save Addition',
+                result: p * q,
+                numPartials: partials.length,
+                csaStages,
+                totalCarrySavePairs,
+                // Key: CSA structure might reveal something
+                reductionRatio: partials.length / 2,
+                csaEfficiency: totalCarrySavePairs / (partials.length || 1)
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 5: Bitwise Correlation
+        // How do factor bits correlate with product bits?
+        // ============================================
+        function bitwiseCorrelation(p, q) {
+            const N = p * q;
+            const maxBits = bitLength(N);
+            
+            const pBits = toBits(p, maxBits);
+            const qBits = toBits(q, maxBits);
+            const nBits = toBits(N, maxBits);
+            
+            // Correlation: how predictable is each N bit from p,q bits?
+            let matchesP = 0, matchesQ = 0, matchesXor = 0, matchesAnd = 0, matchesOr = 0;
+            
+            for (let i = 0; i < maxBits; i++) {
+                const pBit = pBits[i] || 0;
+                const qBit = qBits[i] || 0;
+                const nBit = nBits[i];
+                
+                if (nBit === pBit) matchesP++;
+                if (nBit === qBit) matchesQ++;
+                if (nBit === (pBit ^ qBit)) matchesXor++;
+                if (nBit === (pBit & qBit)) matchesAnd++;
+                if (nBit === (pBit | qBit)) matchesOr++;
+            }
+            
+            return {
+                name: 'Bitwise Correlation',
+                result: N,
+                totalBits: maxBits,
+                matchesP: matchesP / maxBits,
+                matchesQ: matchesQ / maxBits,
+                matchesXor: matchesXor / maxBits,
+                matchesAnd: matchesAnd / maxBits,
+                matchesOr: matchesOr / maxBits,
+                // Best predictor?
+                bestPredictor: ['P', 'Q', 'XOR', 'AND', 'OR'][
+                    [matchesP, matchesQ, matchesXor, matchesAnd, matchesOr]
+                    .indexOf(Math.max(matchesP, matchesQ, matchesXor, matchesAnd, matchesOr))
+                ]
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 6: Hamming Weight Analysis
+        // Population count patterns
+        // ============================================
+        function hammingAnalysis(p, q) {
+            const N = p * q;
+            
+            const hwP = popcount(p);
+            const hwQ = popcount(q);
+            const hwN = popcount(N);
+            const hwSum = popcount(p + q);
+            const hwDiff = popcount(Math.abs(p - q));
+            const hwXor = popcount(p ^ q);
+            const hwAnd = popcount(p & q);
+            const hwOr = popcount(p | q);
+            
+            const lenP = bitLength(p);
+            const lenQ = bitLength(q);
+            const lenN = bitLength(N);
+            
+            return {
+                name: 'Hamming Weight Analysis',
+                result: N,
+                hwP, hwQ, hwN,
+                hwSum, hwDiff, hwXor, hwAnd, hwOr,
+                // Densities
+                densityP: hwP / lenP,
+                densityQ: hwQ / lenQ,
+                densityN: hwN / lenN,
+                // Relationships
+                hwProduct: hwP * hwQ,
+                hwRatio: hwN / (hwP * hwQ),
+                // Key: does hwN correlate with balance?
+                densityDiff: Math.abs(hwP/lenP - hwQ/lenQ),
+                hwNormDiff: Math.abs(hwP - hwQ) / Math.max(hwP, hwQ)
+            };
+        }
+        
+        // ============================================
+        // BOOLEAN METHOD 7: GF(2) Polynomial View
+        // Treat as polynomials over binary field
+        // ============================================
+        function gf2Analysis(p, q) {
+            const N = p * q;
+            
+            // In GF(2), multiplication is XOR of shifted values (carryless)
+            let gf2Product = 0;
+            let temp = q;
+            let shift = 0;
+            while (temp) {
+                if (temp & 1) gf2Product ^= (p << shift);
+                temp >>>= 1;
+                shift++;
+            }
+            
+            // The "error" between GF(2) and integer multiplication
+            const error = N ^ gf2Product;
+            
+            // GF(2) degree = highest bit position
+            const degP = bitLength(p) - 1;
+            const degQ = bitLength(q) - 1;
+            const degN = bitLength(N) - 1;
+            const degGF2 = bitLength(gf2Product) - 1;
+            
+            // Factorization in GF(2) is different from integers!
+            // Check if gf2Product has any interesting structure
+            
+            return {
+                name: 'GF(2) Polynomial',
+                result: N,
+                gf2Product,
+                error,
+                errorPopcount: popcount(error),
+                errorRatio: popcount(error) / bitLength(N),
+                degP, degQ, degN, degGF2,
+                // Key insight: GF(2) vs integer structure
+                degreeMatch: degN === degP + degQ,
+                gf2DegreeMatch: degGF2 === degP + degQ
+            };
+        }
+        
+        // ============================================
+        // DECIMAL METHODS (for comparison)
+        // ============================================
+        function schoolbookDecimal(p, q) {
+            const pDigits = p.toString().split('').map(Number).reverse();
+            const qDigits = q.toString().split('').map(Number).reverse();
+            const width = pDigits.length + qDigits.length;
+            
+            const partials = [];
+            for (let j = 0; j < qDigits.length; j++) {
+                const row = new Array(width).fill(0);
+                let carry = 0;
+                for (let i = 0; i < pDigits.length; i++) {
+                    const prod = pDigits[i] * qDigits[j] + carry;
+                    row[i + j] = prod % 10;
+                    carry = Math.floor(prod / 10);
+                }
+                if (carry) row[pDigits.length + j] = carry;
+                partials.push(row);
+            }
+            
+            const result = new Array(width).fill(0);
+            let carry = 0;
+            const carries = [];
+            for (let col = 0; col < width; col++) {
+                let sum = carry;
+                for (const row of partials) sum += row[col];
+                result[col] = sum % 10;
+                carry = Math.floor(sum / 10);
+                carries.push(carry);
+            }
+            
+            return {
+                name: 'Schoolbook (Decimal)',
+                result: p * q,
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries),
+                carryPositions: carries.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0)
+            };
+        }
+        
+        function latticeDecimal(p, q) {
+            const pDigits = p.toString().split('').map(Number);
+            const qDigits = q.toString().split('').map(Number);
+            const rows = qDigits.length, cols = pDigits.length;
+            
+            const lattice = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    const prod = pDigits[c] * qDigits[r];
+                    row.push({ upper: Math.floor(prod / 10), lower: prod % 10 });
+                }
+                lattice.push(row);
+            }
+            
+            const numDiagonals = rows + cols - 1;
+            const carries = [];
+            let carry = 0;
+            
+            for (let d = numDiagonals - 1; d >= 0; d--) {
+                let sum = carry;
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (r + c === d) sum += lattice[r][c].lower;
+                        if (r + c + 1 === d) sum += lattice[r][c].upper;
+                    }
+                }
+                carry = Math.floor(sum / 10);
+                carries.unshift(carry);
+            }
+            
+            return {
+                name: 'Lattice (Decimal)',
+                result: p * q,
+                totalCarry: carries.reduce((a, b) => a + b, 0),
+                maxCarry: Math.max(...carries)
+            };
+        }
+        
+        // ============================================
+        // Main Analysis
+        // ============================================
+        function analyzeAll(p, q) {
+            return {
+                // Boolean methods
+                binaryLong: binaryLongMultiply(p, q),
+                xor: xorAnalysis(p, q),
+                booth: boothAnalysis(p, q),
+                carrySave: carrySaveAnalysis(p, q),
+                bitCorr: bitwiseCorrelation(p, q),
+                hamming: hammingAnalysis(p, q),
+                gf2: gf2Analysis(p, q),
+                // Decimal methods
+                schoolbook: schoolbookDecimal(p, q),
+                lattice: latticeDecimal(p, q)
+            };
+        }
+        
+        function analyze() {
+            const p = parseInt(document.getElementById('primeP').value);
+            const q = parseInt(document.getElementById('primeQ').value);
+            const N = p * q;
+            const ratio = (p + q) / (2 * Math.sqrt(N));
+            
+            const results = analyzeAll(p, q);
+            
+            let html = '';
+            
+            // Header
+            html += `<div class="panel">`;
+            html += `<h2>📊 N = ${p} × ${q} = ${N.toLocaleString()}</h2>`;
+            html += `<div class="stats-row">`;
+            html += `<div class="stat-box"><div class="stat-value">${ratio.toFixed(4)}</div><div class="stat-label">Balance Ratio</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${Math.abs(q - p)}</div><div class="stat-label">|p - q|</div></div>`;
+            html += `<div class="stat-box"><div class="stat-value">${ratio < 1.1 ? '⚖️' : ratio < 2 ? '📊' : '📐'}</div><div class="stat-label">${ratio < 1.1 ? 'Balanced' : ratio < 2 ? 'Moderate' : 'Unbalanced'}</div></div>`;
+            html += `</div>`;
+            
+            // Binary representations
+            html += `<div class="bit-visual">`;
+            html += `p = ${toBits(p).join('')} (${popcount(p)} ones)\n`;
+            html += `q = ${toBits(q).join('')} (${popcount(q)} ones)\n`;
+            html += `N = ${toBits(N).join('')} (${popcount(N)} ones)`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Algorithm cards
+            html += `<div class="algorithm-grid">`;
+            
+            // Binary Long
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🔢 ${results.binaryLong.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Partial Products</td><td>${results.binaryLong.numPartials}</td></tr>`;
+            html += `<tr><td>Total AND ops</td><td>${results.binaryLong.totalAnds}</td></tr>`;
+            html += `<tr><td>Carry Chain Total</td><td class="hl-green">${results.binaryLong.totalCarryChain}</td></tr>`;
+            html += `<tr><td>Max Carry Prop</td><td class="hl-yellow">${results.binaryLong.maxCarryPropagation}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // XOR Analysis
+            html += `<div class="algorithm-card">`;
+            html += `<h3>⊕ ${results.xor.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>p XOR q</td><td>${results.xor.pXorQ} (${results.xor.xorPopcount} bits)</td></tr>`;
+            html += `<tr><td>p AND q</td><td>${results.xor.pAndQ} (${results.xor.andPopcount} bits)</td></tr>`;
+            html += `<tr><td>GF(2) Product</td><td>${results.xor.carrylessMult}</td></tr>`;
+            html += `<tr><td>Diff from Real</td><td class="hl-green">${results.xor.diffPopcount} bits</td></tr>`;
+            html += `<tr><td>Bit Overlap</td><td class="hl-yellow">${results.xor.bitOverlap.toFixed(3)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Booth
+            html += `<div class="algorithm-card">`;
+            html += `<h3>📟 ${results.booth.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Booth Digits</td><td>[${results.booth.boothDigits.join(',')}]</td></tr>`;
+            html += `<tr><td>Additions</td><td>${results.booth.additions}</td></tr>`;
+            html += `<tr><td>Subtractions</td><td>${results.booth.subtractions}</td></tr>`;
+            html += `<tr><td>Total Ops</td><td class="hl-green">${results.booth.totalOps}</td></tr>`;
+            html += `<tr><td>Runs of 1s</td><td class="hl-yellow">${results.booth.runsOfOnes}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Carry-Save
+            html += `<div class="algorithm-card">`;
+            html += `<h3>💾 ${results.carrySave.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>CSA Stages</td><td>${results.carrySave.csaStages}</td></tr>`;
+            html += `<tr><td>CSA Pairs</td><td class="hl-green">${results.carrySave.totalCarrySavePairs}</td></tr>`;
+            html += `<tr><td>Efficiency</td><td>${results.carrySave.csaEfficiency.toFixed(3)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Bitwise Correlation
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🔗 ${results.bitCorr.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>N ≈ p bits</td><td>${(results.bitCorr.matchesP * 100).toFixed(1)}%</td></tr>`;
+            html += `<tr><td>N ≈ q bits</td><td>${(results.bitCorr.matchesQ * 100).toFixed(1)}%</td></tr>`;
+            html += `<tr><td>N ≈ XOR</td><td class="hl-yellow">${(results.bitCorr.matchesXor * 100).toFixed(1)}%</td></tr>`;
+            html += `<tr><td>N ≈ AND</td><td>${(results.bitCorr.matchesAnd * 100).toFixed(1)}%</td></tr>`;
+            html += `<tr><td>N ≈ OR</td><td>${(results.bitCorr.matchesOr * 100).toFixed(1)}%</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Hamming
+            html += `<div class="algorithm-card">`;
+            html += `<h3>⚖️ ${results.hamming.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>HW(p), HW(q)</td><td>${results.hamming.hwP}, ${results.hamming.hwQ}</td></tr>`;
+            html += `<tr><td>HW(N)</td><td class="hl-green">${results.hamming.hwN}</td></tr>`;
+            html += `<tr><td>HW(p)×HW(q)</td><td>${results.hamming.hwProduct}</td></tr>`;
+            html += `<tr><td>HW(N)/Product</td><td class="hl-yellow">${results.hamming.hwRatio.toFixed(3)}</td></tr>`;
+            html += `<tr><td>Density Diff</td><td>${results.hamming.densityDiff.toFixed(3)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // GF(2)
+            html += `<div class="algorithm-card">`;
+            html += `<h3>🔮 ${results.gf2.name}</h3>`;
+            html += `<table>`;
+            html += `<tr><td>GF(2) Product</td><td>${results.gf2.gf2Product}</td></tr>`;
+            html += `<tr><td>Integer Product</td><td>${results.gf2.result}</td></tr>`;
+            html += `<tr><td>Error Bits</td><td class="hl-green">${results.gf2.errorPopcount}</td></tr>`;
+            html += `<tr><td>Error Ratio</td><td class="hl-yellow">${results.gf2.errorRatio.toFixed(3)}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            // Decimal comparison
+            html += `<div class="algorithm-card">`;
+            html += `<h3>📝 Decimal Methods</h3>`;
+            html += `<table>`;
+            html += `<tr><td>Schoolbook Carry</td><td class="hl-green">${results.schoolbook.totalCarry}</td></tr>`;
+            html += `<tr><td>Lattice Carry</td><td class="hl-green">${results.lattice.totalCarry}</td></tr>`;
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `</div>`; // end grid
+            
+            // Key insights
+            html += `<div class="panel">`;
+            html += `<h2>💡 Boolean Insights</h2>`;
+            
+            // XOR difference insight
+            html += `<div class="finding">`;
+            html += `<strong>GF(2) vs Integer:</strong> `;
+            html += `The ${results.xor.diffPopcount} differing bits between carryless and real multiplication `;
+            html += `represent the "carry information" — bits created purely by carrying. `;
+            html += `Ratio: ${results.xor.diffRatio.toFixed(3)} of product bits are carry-created.`;
+            html += `</div>`;
+            
+            // Booth insight
+            html += `<div class="finding">`;
+            html += `<strong>Booth Encoding:</strong> `;
+            html += `q has ${results.booth.runsOfOnes} runs of consecutive 1s, `;
+            html += `longest run: ${results.booth.longestRun} bits. `;
+            html += `Booth converts ${popcount(q)} additions to ${results.booth.totalOps} ops.`;
+            html += `</div>`;
+            
+            // Hamming insight
+            if (Math.abs(results.hamming.densityDiff) < 0.1) {
+                html += `<div class="finding positive">`;
+                html += `<strong>Hamming Signal:</strong> `;
+                html += `Bit densities similar (diff = ${results.hamming.densityDiff.toFixed(3)}) — balanced factors!`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // ============================================
+        // Batch Test
+        // ============================================
+        function computeCorrelation(arr1, arr2) {
+            if (arr1.length !== arr2.length || arr1.length === 0) return 0;
+            const n = arr1.length;
+            const mean1 = arr1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = arr2.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den1 = 0, den2 = 0;
+            for (let i = 0; i < n; i++) {
+                const d1 = arr1[i] - mean1;
+                const d2 = arr2[i] - mean2;
+                num += d1 * d2;
+                den1 += d1 * d1;
+                den2 += d2 * d2;
+            }
+            if (den1 === 0 || den2 === 0) return 0;
+            return num / Math.sqrt(den1 * den2);
+        }
+        
+        function batchTest() {
+            const batchResults = [];
+            
+            for (let i = 0; i < 100; i++) {
+                let p, q;
+                if (i < 40) {
+                    const idx = Math.floor(Math.random() * (testPrimes.length - 5)) + 5;
+                    p = testPrimes[idx];
+                    q = testPrimes[idx + Math.floor(Math.random() * 3) + 1];
+                } else {
+                    p = testPrimes[Math.floor(Math.random() * 30)];
+                    q = testPrimes[testPrimes.length - 1 - Math.floor(Math.random() * 30)];
+                }
+                if (p > q) [p, q] = [q, p];
+                
+                const N = p * q;
+                const ratio = (p + q) / (2 * Math.sqrt(N));
+                const results = analyzeAll(p, q);
+                
+                batchResults.push({
+                    p, q, N, ratio,
+                    // Boolean features
+                    binaryCarryChain: results.binaryLong.totalCarryChain,
+                    maxCarryProp: results.binaryLong.maxCarryPropagation,
+                    xorDiffBits: results.xor.diffPopcount,
+                    xorDiffRatio: results.xor.diffRatio,
+                    bitOverlap: results.xor.bitOverlap,
+                    boothOps: results.booth.totalOps,
+                    boothTransDensity: results.booth.transitionDensity,
+                    csaPairs: results.carrySave.totalCarrySavePairs,
+                    hwRatio: results.hamming.hwRatio,
+                    hwDensityDiff: results.hamming.densityDiff,
+                    gf2ErrorRatio: results.gf2.errorRatio,
+                    matchXor: results.bitCorr.matchesXor,
+                    matchAnd: results.bitCorr.matchesAnd,
+                    // Decimal features
+                    schoolbookCarry: results.schoolbook.totalCarry,
+                    latticeCarry: results.lattice.totalCarry
+                });
+            }
+            
+            const ratios = batchResults.map(r => r.ratio);
+            
+            const features = {
+                // Boolean
+                'Binary Carry Chain': batchResults.map(r => r.binaryCarryChain),
+                'Max Carry Propagation': batchResults.map(r => r.maxCarryProp),
+                'XOR Diff Bits': batchResults.map(r => r.xorDiffBits),
+                'XOR Diff Ratio': batchResults.map(r => r.xorDiffRatio),
+                'Bit Overlap (AND)': batchResults.map(r => r.bitOverlap),
+                'Booth Total Ops': batchResults.map(r => r.boothOps),
+                'Booth Transition Density': batchResults.map(r => r.boothTransDensity),
+                'CSA Pairs': batchResults.map(r => r.csaPairs),
+                'HW Ratio (N/p*q)': batchResults.map(r => r.hwRatio),
+                'HW Density Diff': batchResults.map(r => r.hwDensityDiff),
+                'GF(2) Error Ratio': batchResults.map(r => r.gf2ErrorRatio),
+                'Bit Match XOR': batchResults.map(r => r.matchXor),
+                'Bit Match AND': batchResults.map(r => r.matchAnd),
+                // Decimal
+                'Schoolbook Carry': batchResults.map(r => r.schoolbookCarry),
+                'Lattice Carry': batchResults.map(r => r.latticeCarry)
+            };
+            
+            const correlations = {};
+            for (const [name, values] of Object.entries(features)) {
+                correlations[name] = computeCorrelation(ratios, values);
+            }
+            
+            let html = '';
+            
+            html += `<div class="panel">`;
+            html += `<h2>📊 Batch Test Results (n = ${batchResults.length})</h2>`;
+            html += `<p>Correlations with Balance Ratio (lower ratio = more balanced)</p>`;
+            
+            html += `<table>`;
+            html += `<tr><th>Feature</th><th>Correlation</th><th>Visual</th><th>Strength</th></tr>`;
+            
+            const sorted = Object.entries(correlations).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            for (const [name, corr] of sorted) {
+                const absCorr = Math.abs(corr);
+                const strength = absCorr > 0.5 ? 'STRONG' : absCorr > 0.3 ? 'moderate' : absCorr > 0.2 ? 'weak' : 'none';
+                const color = absCorr > 0.5 ? 'hl-green' : absCorr > 0.3 ? 'hl-yellow' : absCorr > 0.2 ? 'hl-blue' : '';
+                const isBoolean = !name.includes('Schoolbook') && !name.includes('Lattice');
+                const tag = isBoolean ? '🔌' : '📝';
+                
+                html += `<tr>`;
+                html += `<td>${tag} ${name}</td>`;
+                html += `<td class="${color}">${corr.toFixed(4)}</td>`;
+                html += `<td><div class="correlation-bar"><div class="correlation-fill ${corr >= 0 ? 'positive' : 'negative'}" style="width: ${absCorr * 100}%"></div></div></td>`;
+                html += `<td class="${color}">${strength}</td>`;
+                html += `</tr>`;
+            }
+            
+            html += `</table>`;
+            
+            // Winners
+            const winner = sorted[0];
+            const booleanWinner = sorted.find(([name]) => !name.includes('Schoolbook') && !name.includes('Lattice'));
+            
+            html += `<div class="finding ${Math.abs(winner[1]) > 0.4 ? 'positive' : ''}">`;
+            html += `<strong>🏆 Overall Strongest:</strong> ${winner[0]} (r = ${winner[1].toFixed(4)})`;
+            html += `</div>`;
+            
+            if (booleanWinner && booleanWinner[0] !== winner[0]) {
+                html += `<div class="finding">`;
+                html += `<strong>🔌 Boolean Winner:</strong> ${booleanWinner[0]} (r = ${booleanWinner[1].toFixed(4)})`;
+                html += `</div>`;
+            }
+            
+            // Compare Boolean vs Decimal
+            const boolCorrs = sorted.filter(([name]) => !name.includes('Schoolbook') && !name.includes('Lattice'));
+            const decCorrs = sorted.filter(([name]) => name.includes('Schoolbook') || name.includes('Lattice'));
+            
+            const bestBool = Math.max(...boolCorrs.map(([,c]) => Math.abs(c)));
+            const bestDec = Math.max(...decCorrs.map(([,c]) => Math.abs(c)));
+            
+            html += `<div class="finding ${bestBool > bestDec ? 'discovery' : ''}">`;
+            html += `<strong>🔌 vs 📝 Comparison:</strong><br>`;
+            html += `Best Boolean: |r| = ${bestBool.toFixed(4)}<br>`;
+            html += `Best Decimal: |r| = ${bestDec.toFixed(4)}<br>`;
+            if (bestBool > bestDec) {
+                html += `<span class="hl-pink">🔥 Boolean method produces STRONGER signal!</span>`;
+            } else if (Math.abs(bestBool - bestDec) < 0.05) {
+                html += `<span class="hl-yellow">Similar signal strength.</span>`;
+            } else {
+                html += `<span class="hl-blue">Decimal methods still lead.</span>`;
+            }
+            html += `</div>`;
+            
+            html += `</div>`;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        // Initialize
+        analyze();
+    </script>
+</body>
+</html>
