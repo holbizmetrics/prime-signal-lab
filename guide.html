@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide — Prime Signal Lab</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a12;
+    color: #e0e0e8;
+    min-height: 100vh;
+    padding: 32px 24px 100px;
+    line-height: 1.6;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  a { color: #4dd0e1; }
+  a:hover { color: #80deea; }
+  nav.crumbs { color: #707080; font-size: 0.85rem; margin-bottom: 24px; }
+  nav.crumbs a { text-decoration: none; }
+  h1 {
+    font-size: 2.2rem;
+    background: linear-gradient(90deg, #4dd0e1, #ba68c8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #9090a0; font-size: 1.05rem; margin-bottom: 32px; }
+  h2 {
+    margin: 40px 0 12px;
+    font-size: 1.4rem;
+    color: #4dd0e1;
+    border-bottom: 1px solid rgba(77, 208, 225, 0.2);
+    padding-bottom: 6px;
+  }
+  h3 { margin: 24px 0 8px; font-size: 1.05rem; color: #e0e0e8; }
+  p { margin-bottom: 12px; }
+  ul, ol { margin: 8px 0 12px 24px; }
+  li { margin-bottom: 6px; }
+  code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 3px; font-size: 0.9em; color: #ffd54f; }
+  blockquote {
+    margin: 16px 0;
+    padding: 12px 18px;
+    background: rgba(77, 208, 225, 0.06);
+    border-left: 3px solid #4dd0e1;
+    border-radius: 4px;
+    color: #c8c8d8;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+    text-transform: uppercase;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .tag-live    { background: rgba( 76,175, 80, 0.18); color: #81c784; border: 1px solid rgba(129,199,132,0.3); }
+  .tag-hist    { background: rgba(255,179,  0, 0.16); color: #ffb74d; border: 1px solid rgba(255,183, 77,0.3); }
+  .tag-mismatch{ background: rgba(244, 67, 54, 0.16); color: #e57373; border: 1px solid rgba(229,115,115,0.3); }
+  .tag-tbd     { background: rgba(158,158,158, 0.16); color: #b0b0b0; border: 1px solid rgba(176,176,176,0.3); }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92rem; }
+  th, td { border: 1px solid #2a2a3a; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: rgba(255,255,255,0.04); color: #4dd0e1; font-weight: 600; }
+  .scope-box {
+    margin: 20px 0;
+    padding: 16px 20px;
+    background: rgba(255, 179, 0, 0.06);
+    border-left: 3px solid #ffb74d;
+    border-radius: 4px;
+  }
+  .scope-box h3 { color: #ffb74d; margin-top: 0; }
+  footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid #2a2a3a; color: #707080; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav class="crumbs"><a href="index.html">← back to lab</a></nav>
+
+<h1>Guide</h1>
+<p class="subtitle">What this lab investigated, what it observed, what didn't work, and what's open.</p>
+
+<!-- ====================================================================== -->
+<!--                              TOP LAYER                                   -->
+<!--      For cold readers and 30-second skimmers. Question + headline.       -->
+<!-- ====================================================================== -->
+
+<h2>The question</h2>
+
+<p>RSA's security rests on the assumption that, given <code>N = p·q</code>, recovering <code>p</code> and <code>q</code> is hard. This lab investigates a narrower form of that question:</p>
+
+<blockquote>
+  <strong>Can we extract factor information from <code>N = p·q</code> by analyzing the carries that occur during the multiplication itself?</strong>
+</blockquote>
+
+<p>Carries are the bit-level "remainders" that propagate when you multiply two binary numbers. The intuition behind this lab: carry patterns depend on <em>both</em> operands and <em>both</em> get baked into <code>N</code>. If the carries leave a detectable fingerprint, that fingerprint might leak factor information.</p>
+
+<p>This is not an end-to-end factoring attack. It's a structural investigation: <em>where does factor information live in <code>N</code>, and how much of it survives multiplication?</em></p>
+
+<h2>What we observed — top findings</h2>
+
+<p>Each finding below is tagged for verifiability:</p>
+<ul style="font-size: 0.9rem;">
+  <li><span class="tag tag-live">live</span> reproducible by clicking the linked tool with documented inputs</li>
+  <li><span class="tag tag-hist">historical</span> documented observation from an earlier experiment; the tool retains the prose but doesn't recompute the exact number on click</li>
+  <li><span class="tag tag-mismatch">regime mismatch</span> the headline is on a different experiment than what the tool currently runs</li>
+  <li><span class="tag tag-tbd">tbd-verify</span> awaiting per-tool verification before final labeling</li>
+</ul>
+
+<h3>1. Carries leak factor information — measurable through multiple lenses</h3>
+<p><span class="tag tag-mismatch">regime mismatch</span> The widely-quoted <code>r = 0.86</code> headline (single-feature correlation: <code>maxOneRun → carryChainLength</code>) is a documented historical observation. The current <a href="carry-reconstruction-1.html">carry-reconstruction-1</a> tool runs a <em>different, more comprehensive</em> experiment: multi-feature logistic regression predicting the full carry sequence, reporting <strong>~89% bit accuracy</strong> with <strong>40% perfect-sequence reconstruction</strong> on 10-bit semiprimes (sample = 200). The metrics aren't comparable — different feature counts, different target shape, different reporting axis. <em>Honest interpretation: the signal is robust enough that it survives both experiment shapes; the specific <code>r = 0.86</code> number is not what the tool measures now.</em></p>
+
+<h3>2. Signals fuse — orthogonal ones compound</h3>
+<p><span class="tag tag-live">live</span> A single carry-extraction signal can reach ~92% accuracy on bit-prediction; combining multiple orthogonal signals (windowed, modular, local, global feature families) pushes ensemble accuracy slightly higher in the live <a href="fusion-analysis.html">fusion-analysis</a> output (~92.4%). This is the substantive claim: signals are <em>not</em> redundant — different feature families capture different parts of the carry pattern.</p>
+
+<h3>3. Bit-level recoverability scales (10-bit → 28-bit, on the experiments tested)</h3>
+<p><span class="tag tag-hist">historical</span> The "Research Findings" tab of <a href="carry-research-lab.html">carry-research-lab</a> documents ~92% / 91% / 92% bit accuracy across 10-bit / 20-bit / 28-bit factors — i.e., the signal does <em>not</em> collapse at slightly larger N. These findings live as prose in the Research Findings tab; the live interactive tabs (Single Trace, Reconstruction, Scaling, etc.) recompute related metrics on click but the headline numbers themselves are from a historical run whose exact regime isn't documented in the current repo. <em>To verify: open the tool, click through the interactive tabs.</em></p>
+
+<h3>4. Information is transformed, not destroyed</h3>
+<p><span class="tag tag-tbd">tbd-verify</span> The framing surfaced by <a href="carry-transformation-analysis.html">carry-transformation-analysis</a>: carries don't <em>erase</em> factor information — they encode it into a form that's harder to read. The tool offers recoverability tests; the headline framing is a research thesis rather than a single number to verify.</p>
+
+<!-- ====================================================================== -->
+<!--                           MIDDLE LAYER                                   -->
+<!--  Future-you re-orientation + scientist methodology. Negative + open.     -->
+<!-- ====================================================================== -->
+
+<h2>What didn't work — alternative angles probed</h2>
+
+<p>Three tools investigate representational alternatives to bit-level carry analysis. Their results are mostly <em>null</em> or <em>structural-only</em>, which is informative.</p>
+
+<table>
+<tr><th>Tool</th><th>What it probed</th><th>What was found / not found</th></tr>
+<tr>
+  <td><a href="padic-explorer.html">padic-explorer</a></td>
+  <td>p-adic representation of integers — does looking at <code>N</code> through the p-adic lens reveal factor structure?</td>
+  <td><span class="tag tag-tbd">tbd-verify</span> Exploratory; no headline numerical finding promoted to repo level. Use as a structural visualization, not as an attack vehicle.</td>
+</tr>
+<tr>
+  <td><a href="coordinate-system.html">coordinate-system</a></td>
+  <td>Alternative coordinate embeddings of primes/semiprimes</td>
+  <td><span class="tag tag-tbd">tbd-verify</span> Sibling territory to Prime-Explorer (3D geometric); Prime-Explorer's investigation found mostly NULL on geometric encoding. This tool's findings within Prime Signal Lab are exploratory.</td>
+</tr>
+<tr>
+  <td><a href="boolean-multiplication-explorer.html">boolean-multiplication-explorer</a></td>
+  <td>GF(2) (carry-less) multiplication — what does multiplication look like <em>without</em> carries?</td>
+  <td><span class="tag tag-tbd">tbd-verify</span> Used as the <em>baseline</em> for the carry research: by isolating the no-carry version, you can attribute the recoverable signal specifically to carries rather than to bit-pattern overlap.</td>
+</tr>
+</table>
+
+<h2>Open questions</h2>
+
+<ol>
+  <li><strong>Does the signal scale to RSA-realistic <code>N</code>?</strong> The verified work covers ≤ 28-bit factors. RSA-2048 uses ~1024-bit factors. The 92% recoverability at 10/20/28 bits is not evidence that the signal survives — that's a separate experimental program.</li>
+  <li><strong>Is there a non-trivial theoretical upper bound on what carry-based signals can leak?</strong> Information-theoretic ceiling analysis (in <a href="carry-reconstruction-1.html">carry-reconstruction-1</a>) computes a per-run entropy figure but does not establish a regime-independent bound.</li>
+  <li><strong>What's the connection to known partial-information attacks?</strong> Coppersmith's small-roots, Boneh-Durfee on small-<code>d</code>, May's partial-key-exposure work — these all attack RSA under specific partial-information assumptions. The carry-leakage findings here haven't been formally related to those literatures.</li>
+  <li><strong>Does the <code>r → 1.0 = factoring solved</code> framing hold up?</strong> The framing in <a href="carry-reconstruction-1.html">carry-reconstruction-1</a> claims that perfect carry reconstruction implies factoring via <code>onesFromPP = N + 2·carryOut − carryIn → polynomial factoring → p, q</code>. This is presented as an architectural argument, not a proof. Whether the path actually closes under realistic recoverability levels is open.</li>
+</ol>
+
+<!-- ====================================================================== -->
+<!--                            BOTTOM LAYER                                  -->
+<!--      Honest scope, provenance, tool index. For scientists / audit.       -->
+<!-- ====================================================================== -->
+
+<h2>Honest scope</h2>
+
+<div class="scope-box">
+<h3>What the verified work actually covers</h3>
+<ul>
+  <li><strong>Bit-length regime:</strong> 10-bit to 28-bit factors (i.e., <code>N</code> up to ~56-bit). Far below RSA-realistic scales (1024-bit factors and up).</li>
+  <li><strong>Sample regime:</strong> Random balanced semiprimes (where documented). Default sample sizes in the tools are in the 100-300 range.</li>
+  <li><strong>Recoverability metric:</strong> Most quoted numbers (92%, 89.3%, etc.) are <em>bit-level accuracy</em> — the fraction of individual carry bits correctly reconstructed. This is <em>not</em> the same as <em>perfect sequence recovery</em>, which is harder and only achieved on ~40% of samples in the verified tool.</li>
+  <li><strong>The signal exists; the attack does not.</strong> Recovering carries with bit-accuracy ~92% is structurally meaningful but does not constitute a factoring attack at RSA scale. The "path to factoring" claim is architectural, not demonstrated.</li>
+</ul>
+</div>
+
+<h2>Provenance</h2>
+
+<p><span class="tag tag-tbd">tbd-verify</span> The tools in this repo originated in the Prometheus-Crystal-Lab research thread on bit-level factorization signals (2026-01 to 2026-04). Specific session-level provenance for each headline statistic — which session generated which number, under which exact regime — has not yet been extracted into this repo from PCL's <code>trajectory.md</code>, <code>ledger.md</code>, and <code>.prometheus/explore/</code> records. This is a known gap; resolving it requires either:</p>
+<ul>
+  <li>Cross-referencing each tool's last-significant-modification commit in PCL with the surrounding session notes</li>
+  <li>Re-running the documented experiments under controlled regimes and replacing the historical headlines with live-reproducible numbers</li>
+</ul>
+<p><em>This guide will be updated with provenance pointers as that work is done.</em></p>
+
+<h2>Tool-by-tool pointers</h2>
+
+<p>For finding the right tool given a question:</p>
+
+<table>
+<tr><th>If you want to…</th><th>Open</th><th>Notes</th></tr>
+<tr><td>See the synthesis of all carry analysis work</td><td><a href="carry-research-lab.html">carry-research-lab</a> ⭐</td><td>6-tab unified platform; start here</td></tr>
+<tr><td>Watch carries propagate through one multiplication</td><td><a href="carry-avalanche.html">carry-avalanche</a></td><td>Bit-level visualizer</td></tr>
+<tr><td>See the historical research timeline + factor-vs-N-only signal split</td><td><a href="carry-avalanche-lab.html">carry-avalanche-lab</a></td><td>Tabbed; "Story" tab is the orientation</td></tr>
+<tr><td>Attempt actual carry sequence reconstruction</td><td><a href="carry-reconstruction-1.html">carry-reconstruction-1</a></td><td>The "GRIND" tool; runs ML logistic regression</td></tr>
+<tr><td>Probe whether information is destroyed or transformed</td><td><a href="carry-transformation-analysis.html">carry-transformation-analysis</a></td><td>Statistical recoverability tests</td></tr>
+<tr><td>See ensemble methods beat single signals</td><td><a href="fusion-analysis.html">fusion-analysis</a></td><td>Multi-signal fusion</td></tr>
+<tr><td>Map where factor information dies</td><td><a href="information-autopsy.html">information-autopsy</a></td><td>Diagnostic</td></tr>
+<tr><td>Aggressively search the feature space</td><td><a href="ultimate-signal-hunter.html">ultimate-signal-hunter</a></td><td>Feature search</td></tr>
+<tr><td>See what's extractable from <code>N</code> alone (no factor leakage)</td><td><a href="n-only-extractor.html">n-only-extractor</a></td><td>N-only baseline</td></tr>
+<tr><td>Combine orthogonal signals</td><td><a href="signal-combinator.html">signal-combinator</a></td><td>Ensemble methods</td></tr>
+<tr><td>Compare addition vs. multiplication structurally</td><td><a href="addition-vs-multiplication.html">addition-vs-multiplication</a></td><td>Foundation question</td></tr>
+<tr><td>Explore GF(2) (carry-less) multiplication</td><td><a href="boolean-multiplication-explorer.html">boolean-multiplication-explorer</a></td><td>Carry-less baseline</td></tr>
+<tr><td>Test whether the signal survives at larger N</td><td><a href="scaling-analysis.html">scaling-analysis</a></td><td>Scaling experiment</td></tr>
+<tr><td>Push extractor performance to its limit</td><td><a href="frontier-extraction.html">frontier-extraction</a></td><td>Best-case extractor</td></tr>
+<tr><td>See which features carry the weight</td><td><a href="ablation-study.html">ablation-study</a></td><td>Feature importance</td></tr>
+<tr><td>Explore non-standard coordinate representations</td><td><a href="coordinate-system.html">coordinate-system</a></td><td>Geometric lens</td></tr>
+<tr><td>Compare factoring algorithms side-by-side</td><td><a href="multi-algorithm-explorer.html">multi-algorithm-explorer</a></td><td>Classical methods comparison</td></tr>
+<tr><td>Broad investigation of semiprime structure</td><td><a href="semiprime-observatory.html">semiprime-observatory</a></td><td>Largest tool (97 KB)</td></tr>
+<tr><td>Explore p-adic representations</td><td><a href="padic-explorer.html">padic-explorer</a></td><td>Number-theoretic lens</td></tr>
+</table>
+
+<footer>
+<p>Prime Signal Lab — guide v0.1. Many [tbd-verify] tags above are pending per-tool deep verification. Build context: bit-level RSA-weakening research thread, Prometheus-Crystal-Lab, 2026-01 → 2026-04.</p>
+<p style="margin-top: 12px;">
+  Related: <a href="https://github.com/holbizmetrics/prime-explorer">Prime Explorer</a> · <a href="https://github.com/holbizmetrics/researches">Researches</a> · <a href="https://github.com/holbizmetrics/Prometheus-Crystal-Lab">Prometheus-Crystal-Lab</a>
+</p>
+</footer>
+
+</div>
+</body>
+</html>
