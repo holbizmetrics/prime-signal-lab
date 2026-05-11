@@ -840,5 +840,73 @@
             </div>
         `;
     </script>
+
+<!-- psl-help-modal-injected -->
+<style>
+  #psl-help-btn {
+    position: fixed; top: 12px; right: 12px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid #4dd0e1; background: rgba(10, 10, 18, 0.92);
+    color: #4dd0e1; cursor: pointer;
+    font-size: 16px; font-weight: 600;
+    z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  #psl-help-btn:hover { background: #4dd0e1; color: #0a0a12; }
+  #psl-help-modal {
+    background: #15151f; color: #e0e0e8;
+    border: 1px solid #4dd0e1; border-radius: 8px;
+    padding: 24px; max-width: 560px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  #psl-help-modal::backdrop { background: rgba(0,0,0,0.6); }
+  #psl-help-modal h3 { color: #4dd0e1; margin: 0 0 14px; font-size: 1.15rem; }
+  #psl-help-modal p { margin: 0 0 10px; line-height: 1.55; font-size: 0.92rem; }
+  #psl-help-modal strong { color: #ba68c8; }
+  #psl-help-modal .psl-guide-link {
+    display: inline-block; margin-top: 14px;
+    color: #4dd0e1; text-decoration: none; font-size: 0.88rem;
+  }
+  #psl-help-modal .psl-guide-link:hover { text-decoration: underline; }
+  #psl-help-close {
+    margin-top: 18px; padding: 8px 18px;
+    border: 1px solid #4dd0e1; background: transparent;
+    color: #4dd0e1; border-radius: 4px; cursor: pointer;
+    font-family: inherit; font-size: 0.9rem;
+  }
+  #psl-help-close:hover { background: #4dd0e1; color: #0a0a12; }
+</style>
+<button id="psl-help-btn" title="What is this tool?" aria-label="Help">?</button>
+<dialog id="psl-help-modal">
+  <h3>Signal Combinator</h3>
+  <p><strong>What it does:</strong> Ensembles N-only and feature-derived signals; tests combinations beyond what fusion-analysis covers.</p>
+  <p><strong>Inputs:</strong> Default settings; run combination.</p>
+  <p><strong>What to look at:</strong> Combined output score vs single-signal baselines.</p>
+  <p><strong>Key insight:</strong> Sister tool to fusion-analysis — different combination strategies on overlapping feature sets.</p>
+  <a class="psl-guide-link" href="guide.html">More context — see the guide →</a>
+  <br><button id="psl-help-close">Close</button>
+</dialog>
+<script>
+  (function() {
+    var btn = document.getElementById('psl-help-btn');
+    var modal = document.getElementById('psl-help-modal');
+    var close = document.getElementById('psl-help-close');
+    if (btn && modal) {
+      btn.addEventListener('click', function() {
+        if (typeof modal.showModal === 'function') { modal.showModal(); }
+        else { modal.setAttribute('open', ''); modal.style.display = 'block'; }
+      });
+    }
+    if (close && modal) {
+      close.addEventListener('click', function() {
+        if (typeof modal.close === 'function') { modal.close(); }
+        else { modal.removeAttribute('open'); modal.style.display = 'none'; }
+      });
+    }
+  })();
+</script>
+
 </body>
 </html>
